@@ -24,10 +24,15 @@ public class Month {
     @Column(nullable = false)
     private Double earning;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(nullable = false)
+    private Long userId;
 
-    @OneToMany(mappedBy = "month", cascade = CascadeType.ALL)
-    private List<Expense> expenses;
+//    @ManyToOne
+//    @JoinColumn(name = "user_id", nullable = false)
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "user_id")
+//    private User user;
+
+//    @OneToMany(mappedBy = "month")
+//    private List<Expense> expenses;
 }

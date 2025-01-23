@@ -25,9 +25,12 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Month> months;
+    private Double earning;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Category> categories;
+//    @OneToMany(mappedBy = "user")
+//    @JoinColumn(referencedColumnName = "id")
+//    private List<Month> months;
+
+//    @OneToMany(mappedBy = "user")
+//    private List<Category> categories;
 }

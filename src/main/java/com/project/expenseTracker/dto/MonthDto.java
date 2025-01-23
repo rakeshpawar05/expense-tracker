@@ -20,5 +20,8 @@ public class MonthDto {
     @Min(value = 0, message = "Earning must be greater than or equal to 0")
     private Double earning;
 
+    @NotNull(message = "userId is required")
+    private Long userId;
+
     private List<ExpenseDto> expenses;
 }
