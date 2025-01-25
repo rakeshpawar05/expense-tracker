@@ -45,8 +45,6 @@ public class ExpenseService {
     }
 
     public List<ExpenseDto> getExpenses(String monthName, String categoryName, String expenseName){
-
-
         List<Expense> expenses = expenseRepository.findByFilters(monthName, categoryName, expenseName);
         return expenses.stream().map(ExpenseService::mapEntityToDTo).toList();
     }

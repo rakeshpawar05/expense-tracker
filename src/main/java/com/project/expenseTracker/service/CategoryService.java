@@ -73,7 +73,9 @@ public class CategoryService {
                 .name(category.getName())
                 .monthId(category.getMonth().getId())
                 .userId(category.getUser().getId())
-                .expenses(category.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList())
+                .expenses(category.getExpenses().stream()
+                        .filter(expense -> expense.getMonth() == category.getMonth())
+                        .map(ExpenseService::mapEntityToDTo).toList())
                 .build();
     }
 
