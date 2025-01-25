@@ -74,7 +74,7 @@ public class CategoryService {
                 .name(category.getName())
                 .monthId(category.getMonth().getId())
                 .userId(category.getUser().getId())
-//                .expenses(category.getExpenses())
+                .expenses(category.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList())
                 .build();
     }
 

@@ -80,7 +80,7 @@ public class MonthService {
                 .earning(month.getEarning())
                 .userId(month.getUser().getId())
                 .categories(month.getCategories().stream().map(CategoryService::mapEntityToDto).toList())
-//                .expenses(month.getExpenses())
+                .expenses(month.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList())
                 .build();
     }
 }
