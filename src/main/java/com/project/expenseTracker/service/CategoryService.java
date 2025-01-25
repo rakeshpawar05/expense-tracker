@@ -2,10 +2,12 @@ package com.project.expenseTracker.service;
 
 import com.project.expenseTracker.dto.CategoryDto;
 import com.project.expenseTracker.entity.Category;
+import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
 import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.CategoryRepository;
+import com.project.expenseTracker.repository.ExpenseRepository;
 import com.project.expenseTracker.repository.MonthRepository;
 import com.project.expenseTracker.repository.UserRepository;
 import lombok.AllArgsConstructor;
@@ -20,6 +22,7 @@ public class CategoryService {
     private CategoryRepository categoryRepository;
     private UserRepository userRepository;
     private MonthRepository monthRepository;
+    private ExpenseRepository expenseRepository;
 
     public Long createCategory(CategoryDto categoryDto){
         User user = userRepository.findById(categoryDto.getUserId()).orElseThrow(
@@ -49,6 +52,11 @@ public class CategoryService {
     public List<CategoryDto> getCategoryByMonthId(Long monthId){
         List<Category> categories = categoryRepository.findByMonthId(monthId);
         return categories.stream().map(CategoryService::mapEntityToDto).toList();
+    }
+
+    public int getAmountById(Long id) {
+        List<Expense> expenses = expenseRepository.findByCategoryId(id);
+        return  expenses.stream().mapToInt(Expense::getAmount).sum();
     }
 
     public Long deleteCategoryById(Long id){

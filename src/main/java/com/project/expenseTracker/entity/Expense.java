@@ -21,7 +21,7 @@ public class Expense {
     private String description;
 
     @Column(nullable = false)
-    private Double amount;
+    private Integer amount;
 
     @ManyToOne
     @JoinColumn(name = "month_id", nullable = false)

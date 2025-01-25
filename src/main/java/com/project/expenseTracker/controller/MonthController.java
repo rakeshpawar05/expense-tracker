@@ -35,6 +35,11 @@ public class MonthController {
         return monthService.updateMonth(id, monthDto);
     }
 
+    @GetMapping("/{id}/amount")
+    public int getAmountForMonth(@PathVariable Long id){
+        return monthService.getAmountForMonth(id);
+    }
+
     @DeleteMapping("/{id}")
     public Long deleteMonth(@PathVariable Long id){
         return monthService.deleteMonthById(id);

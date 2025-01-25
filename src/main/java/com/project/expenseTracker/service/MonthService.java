@@ -1,10 +1,12 @@
 package com.project.expenseTracker.service;
 
 import com.project.expenseTracker.dto.MonthDto;
+import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
 import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.CategoryRepository;
+import com.project.expenseTracker.repository.ExpenseRepository;
 import com.project.expenseTracker.repository.MonthRepository;
 import com.project.expenseTracker.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -21,6 +23,7 @@ public class MonthService {
     private final MonthRepository monthRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final ExpenseRepository expenseRepository;
 
     public Long createMonth(MonthDto monthDto){
         User user = userRepository.findById(monthDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -45,6 +48,11 @@ public class MonthService {
     public List<MonthDto> getMonthByUserId(Long userId){
         List<Month> months = monthRepository.findByUserId(userId);
         return months.stream().map(MonthService::mapEntityToDto).toList();
+    }
+
+    public int getAmountForMonth(Long monthId){
+        List<Expense> expenses = expenseRepository.findByMonthId(monthId);
+        return expenses.stream().mapToInt(Expense::getAmount).sum();
     }
 
     @Transactional

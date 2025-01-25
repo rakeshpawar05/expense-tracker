@@ -35,6 +35,11 @@ public class CategoryController {
         return categoryService.updateCategory(categoryDto, id);
     }
 
+    @GetMapping("/{id}/amount")
+    public int getAmountById(@PathVariable Long id){
+        return categoryService.getAmountById(id);
+    }
+
     @DeleteMapping("/{id}")
     public long deleteCategory(@PathVariable Long id){
         return categoryService.deleteCategoryById(id);
