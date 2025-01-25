@@ -8,8 +8,6 @@ import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.CategoryRepository;
 import com.project.expenseTracker.repository.MonthRepository;
 import com.project.expenseTracker.repository.UserRepository;
-import com.project.expenseTracker.request.MonthRequest;
-import com.project.expenseTracker.response.MonthResponse;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.AllArgsConstructor;
