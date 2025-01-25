@@ -22,10 +22,13 @@ public class ExpenseService {
     private final CategoryRepository categoryRepository;
 
     public long createExpense(ExpenseDto expenseDto){
-        Category category = categoryRepository.findById(expenseDto.getCategoryId()).orElseThrow(
-                () -> new ResourceNotFoundException("Category not found"));
-        Month month = monthRepository.findById(expenseDto.getMonthId()).orElseThrow(
+
+        Month month = monthRepository.findByNameAndYear(expenseDto.getMonthName().split(",")[0],
+                Integer.parseInt(expenseDto.getMonthName().split(",")[1])).orElseThrow(
                 () -> new ResourceNotFoundException("Month not found"));
+
+        Category category = categoryRepository.findByNameAndMonthId(expenseDto.getCategoryName(), month.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         Expense expense = mapDtoToEntity(null, expenseDto, month, category);
         return expenseRepository.save(expense).getId();
@@ -45,7 +48,14 @@ public class ExpenseService {
     }
 
     public List<ExpenseDto> getExpenses(String monthName, String categoryName, String expenseName){
-        List<Expense> expenses = expenseRepository.findByFilters(monthName, categoryName, expenseName);
+        String name = null;
+        Integer year = null;
+        if(monthName != null){
+            name = monthName.split(",")[0];
+            year = Integer.parseInt(monthName.split(",")[1]);
+        }
+
+        List<Expense> expenses = expenseRepository.findByFilters(name, year, categoryName, expenseName);
         return expenses.stream().map(ExpenseService::mapEntityToDTo).toList();
     }
 
@@ -77,8 +87,8 @@ public class ExpenseService {
                 .id(expense.getId())
                 .amount(expense.getAmount())
                 .description(expense.getDescription())
-                .monthId(expense.getMonth().getId())
-                .categoryId(expense.getCategory().getId())
+                .monthName(expense.getMonth().getName() +","+ expense.getMonth().getYear())
+                .categoryName(expense.getCategory().getName())
                 .build();
     }
 }

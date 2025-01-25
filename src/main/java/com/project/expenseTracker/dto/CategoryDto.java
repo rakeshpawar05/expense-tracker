@@ -23,7 +23,7 @@ public class CategoryDto {
     @NotNull(message = "UserId is required")
     private Long userId;
 
-    private Long monthId;
+    private String monthName;
 
     private List<ExpenseDto> expenses;
 }

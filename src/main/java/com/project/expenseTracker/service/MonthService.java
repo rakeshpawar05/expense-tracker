@@ -22,7 +22,7 @@ public class MonthService {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
 
-    public Long mapDtoToEntity(MonthDto monthDto){
+    public Long createMonth(MonthDto monthDto){
         User user = userRepository.findById(monthDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Month month = mapDtoToEntity(null, monthDto, user);
         return monthRepository.save(month).getId();
@@ -56,15 +56,17 @@ public class MonthService {
 
 
     private Month mapDtoToEntity(Month existingMonth, MonthDto monthDto, User user){
+        String name = monthDto.getName().split(",")[0];
+        int year = Integer.parseInt(monthDto.getName().split(",")[1]);
         if(existingMonth != null){
-            existingMonth.setName(monthDto.getName());
-            existingMonth.setYear(monthDto.getYear());
+            existingMonth.setName(name);
+            existingMonth.setYear(year);
             existingMonth.setEarning(monthDto.getEarning());
             return existingMonth;
         } else {
         return Month.builder()
-                .name(monthDto.getName())
-                .year(monthDto.getYear())
+                .name(name)
+                .year(year)
                 .earning(monthDto.getEarning())
                 .user(user)
                 .build();
@@ -74,8 +76,8 @@ public class MonthService {
     private static MonthDto mapEntityToDto(Month month){
         return MonthDto.builder()
                 .id(month.getId())
-                .name(month.getName())
-                .year(month.getYear())
+                .name(month.getName()+","+month.getYear())
+//                .year(month.getYear())
                 .earning(month.getEarning())
                 .userId(month.getUser().getId())
                 .categories(month.getCategories().stream().map(CategoryService::mapEntityToDto).toList())

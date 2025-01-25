@@ -24,7 +24,8 @@ public class CategoryService {
     public Long createCategory(CategoryDto categoryDto){
         User user = userRepository.findById(categoryDto.getUserId()).orElseThrow(
                 () -> new ResourceNotFoundException("User not found"));
-        Month month = monthRepository.findById(categoryDto.getMonthId()).orElseThrow(
+        Month month = monthRepository.findByNameAndYear(categoryDto.getMonthName().split(",")[0],
+                Integer.parseInt(categoryDto.getMonthName().split(",")[1])).orElseThrow(
                 () -> new ResourceNotFoundException("Month not found"));
 
         Category category = mapDtoToEntity(null, categoryDto, user, month);
@@ -71,7 +72,7 @@ public class CategoryService {
         return CategoryDto.builder()
                 .id(category.getId())
                 .name(category.getName())
-                .monthId(category.getMonth().getId())
+                .monthName(category.getMonth().getName() + "," + category.getMonth().getYear())
                 .userId(category.getUser().getId())
                 .expenses(category.getExpenses().stream()
                         .filter(expense -> expense.getMonth() == category.getMonth())

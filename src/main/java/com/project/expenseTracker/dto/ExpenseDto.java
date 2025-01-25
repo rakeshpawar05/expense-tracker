@@ -23,9 +23,9 @@ public class ExpenseDto {
     @Min(value = 0, message = "Amount must be greater than or equal to 0")
     private Double amount;
 
-    @NotNull(message = "Month ID is required")
-    private Long monthId;
+    @NotNull(message = "Month Name is required")
+    private String monthName;
 
-    @NotNull(message = "Category ID is required")
-    private Long categoryId;
+    @NotNull(message = "Category Name is required")
+    private String categoryName;
 }
