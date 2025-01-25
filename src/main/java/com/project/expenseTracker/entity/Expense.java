@@ -23,6 +23,8 @@ public class Expense {
     @Column(nullable = false)
     private Integer amount;
 
+    private String date;
+
     @ManyToOne
     @JoinColumn(name = "month_id", nullable = false)
     private Month month;

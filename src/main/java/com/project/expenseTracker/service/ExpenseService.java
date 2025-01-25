@@ -12,6 +12,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @AllArgsConstructor
@@ -27,10 +28,9 @@ public class ExpenseService {
                 Integer.parseInt(expenseDto.getMonthName().split(",")[1])).orElseThrow(
                 () -> new ResourceNotFoundException("Month not found"));
 
-        Category category = categoryRepository.findByNameAndMonthId(expenseDto.getCategoryName(), month.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+        Optional<Category> category = categoryRepository.findByNameAndMonthId(expenseDto.getCategoryName(), month.getId());
 
-        Expense expense = mapDtoToEntity(null, expenseDto, month, category);
+        Expense expense = mapDtoToEntity(null, expenseDto, month, category.orElse(null));
         return expenseRepository.save(expense).getId();
     }
 
@@ -69,14 +69,16 @@ public class ExpenseService {
         return id;
     }
 
-    private Expense mapDtoToEntity(Expense existingExpense, ExpenseDto expenseDto, Month month, Category category){
+    private Expense mapDtoToEntity(Expense existingExpense, ExpenseDto expenseDto, Month month, Category category) {
         if(existingExpense != null){
             existingExpense.setDescription(expenseDto.getDescription());
             existingExpense.setAmount(expenseDto.getAmount());
+            existingExpense.setDate(expenseDto.getDate());
         }
         return Expense.builder()
                 .amount(expenseDto.getAmount())
                 .description(expenseDto.getDescription())
+                .date(expenseDto.getDate())
                 .month(month)
                 .category(category)
                 .build();
@@ -87,8 +89,9 @@ public class ExpenseService {
                 .id(expense.getId())
                 .amount(expense.getAmount())
                 .description(expense.getDescription())
+                .date(expense.getDate())
                 .monthName(expense.getMonth().getName() +","+ expense.getMonth().getYear())
-                .categoryName(expense.getCategory().getName())
+                .categoryName(expense.getCategory() != null ? expense.getCategory().getName() : null)
                 .build();
     }
 }

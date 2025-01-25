@@ -23,6 +23,9 @@ public class ExpenseDto {
     @Min(value = 0, message = "Amount must be greater than or equal to 0")
     private Integer amount;
 
+    @NotNull(message = "Date is required")
+    private String date;
+
     @NotNull(message = "Month Name is required")
     private String monthName;
 
