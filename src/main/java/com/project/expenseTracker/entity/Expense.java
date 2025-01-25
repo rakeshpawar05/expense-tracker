@@ -23,6 +23,7 @@ public class Expense {
     @Column(nullable = false)
     private Integer amount;
 
+    @Column(nullable = false)
     private String date;
 
     @ManyToOne
