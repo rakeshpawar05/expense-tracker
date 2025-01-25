@@ -2,6 +2,7 @@ package com.project.expenseTracker.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -9,6 +10,10 @@ import java.util.List;
 
 @Entity
 @Data
+@Builder(toBuilder = true)
+@NoArgsConstructor
+@AllArgsConstructor
+@Table(uniqueConstraints = { @UniqueConstraint(name = "UniqueCategoryForMonth", columnNames = { "name", "month_id" }) })
 public class Category {
 
     @Id
@@ -16,7 +21,7 @@ public class Category {
 //    @Column(name = "category_id")
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     @ManyToOne
@@ -27,6 +32,6 @@ public class Category {
     @JoinColumn(name = "month_id", nullable = false)
     private Month month;
 
-    @OneToMany(mappedBy = "category")
+    @OneToMany(mappedBy = "category", orphanRemoval = true)
     private List<Expense> expenses;
 }

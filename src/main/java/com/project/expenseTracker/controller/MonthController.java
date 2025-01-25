@@ -27,7 +27,7 @@ public class MonthController {
 
     @PostMapping
     public long createMonth(@RequestBody MonthDto monthDto){
-        return monthService.createMonth(monthDto);
+        return monthService.mapDtoToEntity(monthDto);
     }
 
     @PutMapping("/{id}")

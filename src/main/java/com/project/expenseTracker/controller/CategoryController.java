@@ -16,28 +16,27 @@ public class CategoryController {
     private CategoryService categoryService;
 
     @GetMapping("/{id}")
-    public CategoryDto getCategoryById(Long id){
-        return new CategoryDto();
+    public CategoryDto getCategoryById(@PathVariable Long id){
+        return categoryService.getCategoryById(id);
     }
 
     @GetMapping
-    public List<CategoryDto> getCategories(){
-        return List.of();
+    public List<CategoryDto> getCategoriesByMonthId(@RequestParam Long monthId){
+        return categoryService.getCategoryByMonthId(monthId);
     }
 
-//    @PostMapping
-//    public long createCategory(@RequestBody CategoryDto categoryDto, HttpServletRequest httpServletRequest){
-////        httpServletRequest.s
-//        return categoryService.createCategory(categoryDto);
-//    }
+    @PostMapping
+    public long createCategory(@RequestBody CategoryDto categoryDto){
+        return categoryService.createCategory(categoryDto);
+    }
 
     @PutMapping("/{id}")
-    public void updateCategory(@RequestBody CategoryDto categoryDto, Long id){
-
+    public CategoryDto updateCategory(@RequestBody CategoryDto categoryDto, @PathVariable Long id){
+        return categoryService.updateCategory(categoryDto, id);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteCategory(Long id){
-
+    public long deleteCategory(@PathVariable Long id){
+        return categoryService.deleteCategoryById(id);
     }
 }

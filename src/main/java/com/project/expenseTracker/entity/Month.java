@@ -33,9 +33,9 @@ public class Month {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @OneToMany(mappedBy = "month")
+    @OneToMany(mappedBy = "month", orphanRemoval = true)
     private List<Category> categories;
 
-    @OneToMany(mappedBy = "month")
+    @OneToMany(mappedBy = "month", orphanRemoval = true)
     private List<Expense> expenses;
 }

@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -15,6 +16,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder(toBuilder = true)
 public class CategoryDto {
 
     private Long id;
@@ -27,5 +29,5 @@ public class CategoryDto {
 
     private Long monthId;
 
-    private List<Expense> expenses;
+    private List<ExpenseDto> expenses;
 }

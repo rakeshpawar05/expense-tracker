@@ -7,6 +7,7 @@ import java.util.List;
 
 @Entity
 @Data
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
@@ -27,9 +28,9 @@ public class User {
 
     private Double earning;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", orphanRemoval = true)
     private List<Month> months;
 
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "user", orphanRemoval = true)
     private List<Category> categories;
 }
