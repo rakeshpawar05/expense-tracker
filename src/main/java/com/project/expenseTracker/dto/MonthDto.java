@@ -1,6 +1,5 @@
 package com.project.expenseTracker.dto;
 
-import com.project.expenseTracker.entity.Category;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

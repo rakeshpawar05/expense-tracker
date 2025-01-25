@@ -9,7 +9,6 @@ import com.project.expenseTracker.repository.CategoryRepository;
 import com.project.expenseTracker.repository.MonthRepository;
 import com.project.expenseTracker.repository.UserRepository;
 import lombok.AllArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

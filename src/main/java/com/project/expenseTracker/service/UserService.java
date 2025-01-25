@@ -1,26 +1,16 @@
 package com.project.expenseTracker.service;
 
-import com.project.expenseTracker.dto.AuthRequest;
 import com.project.expenseTracker.dto.UserDto;
 import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.repository.UserRepository;
 import com.project.expenseTracker.security.UserInfoDetails;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @Service

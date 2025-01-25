@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.engine.spi.CascadeStyle;
 
 import java.util.List;
 
@@ -18,7 +17,6 @@ public class Month {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-//    @Column(name = "month_id")
     private Long id;
 
     @Column(nullable = false)

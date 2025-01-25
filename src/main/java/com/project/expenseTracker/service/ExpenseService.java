@@ -1,11 +1,9 @@
 package com.project.expenseTracker.service;
 
 import com.project.expenseTracker.dto.ExpenseDto;
-import com.project.expenseTracker.dto.MonthDto;
 import com.project.expenseTracker.entity.Category;
 import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
-import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.CategoryRepository;
 import com.project.expenseTracker.repository.ExpenseRepository;
