@@ -11,6 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ExpenseDto {
+
+    private Long id;
+
     @NotBlank(message = "Description is required")
     private String description;
 

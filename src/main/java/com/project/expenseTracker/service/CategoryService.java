@@ -14,8 +14,8 @@ public class CategoryService {
     private CategoryRepository categoryRepository;
     private ModelMapper modelMapper;
 
-    public Long createCategory(CategoryDto categoryDto){
-        Category save = categoryRepository.save(modelMapper.map(categoryDto, Category.class));
-        return save.getId();
-    }
+//    public Long createCategory(CategoryDto categoryDto){
+//        Category save = categoryRepository.save(modelMapper.map(categoryDto, Category.class));
+//        return save.getId();
+//    }
 }

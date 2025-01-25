@@ -29,11 +29,11 @@ public class CategoryController {
         return List.of();
     }
 
-    @PostMapping
-    public long createCategory(@RequestBody CategoryDto categoryDto, HttpServletRequest httpServletRequest){
-//        httpServletRequest.s
-        return categoryService.createCategory(categoryDto);
-    }
+//    @PostMapping
+//    public long createCategory(@RequestBody CategoryDto categoryDto, HttpServletRequest httpServletRequest){
+////        httpServletRequest.s
+//        return categoryService.createCategory(categoryDto);
+//    }
 
     @PutMapping("/{id}")
     public void updateCategory(@RequestBody CategoryDto categoryDto, Long id){

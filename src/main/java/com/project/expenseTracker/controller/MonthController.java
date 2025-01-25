@@ -1,7 +1,11 @@
 package com.project.expenseTracker.controller;
 
 import com.project.expenseTracker.dto.MonthDto;
+import com.project.expenseTracker.entity.Month;
+import com.project.expenseTracker.request.MonthRequest;
+import com.project.expenseTracker.response.MonthResponse;
 import com.project.expenseTracker.service.MonthService;
+import jakarta.websocket.server.PathParam;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,13 +19,13 @@ public class MonthController {
     private MonthService monthService;
 
     @GetMapping("/{id}")
-    public MonthDto getMonthById(Long id){
-        return new MonthDto();
+    public MonthDto getMonthById(@PathVariable Long id){
+        return monthService.getMonthById(id);
     }
 
     @GetMapping
-    public List<MonthDto> getMonths(){
-        return List.of();
+    public List<MonthDto> getMonths(@RequestParam Long userId){
+        return monthService.getMonthByUserId(userId);
     }
 
     @PostMapping
@@ -30,12 +34,12 @@ public class MonthController {
     }
 
     @PutMapping("/{id}")
-    public void updateMonth(@RequestBody MonthDto monthDto, Long id){
-
+    public MonthDto updateMonth(@RequestBody MonthDto monthDto, @PathVariable Long id){
+        return monthService.updateMonth(id, monthDto);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteMonth(Long id){
-
+    public Long deleteMonth(@PathVariable Long id){
+        return monthService.deleteMonthById(id);
     }
 }

@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "expenses")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,6 +13,7 @@ public class Expense {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+//    @Column(name = "expense_id")
     private Long id;
 
     @Column(nullable = false)
@@ -27,6 +27,6 @@ public class Expense {
     private Month month;
 
     @ManyToOne
-    @JoinColumn(name = "category_id", nullable = false)
+    @JoinColumn(name = "category_id")
     private Category category;
 }

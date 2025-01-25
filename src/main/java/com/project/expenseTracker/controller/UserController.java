@@ -2,6 +2,8 @@ package com.project.expenseTracker.controller;
 
 import com.project.expenseTracker.dto.LoginDto;
 import com.project.expenseTracker.dto.UserRegistrationDto;
+import com.project.expenseTracker.request.LoginRequest;
+import com.project.expenseTracker.request.UserRequest;
 import com.project.expenseTracker.service.UserService;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +22,8 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody UserRegistrationDto registrationDto) {
-        userService.registerUser(registrationDto);
+    public ResponseEntity<String> register(@RequestBody UserRegistrationDto userDto) {
+        userService.registerUser(userDto);
         return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully!");
     }
 

@@ -4,6 +4,8 @@ import com.project.expenseTracker.dto.LoginDto;
 import com.project.expenseTracker.dto.UserRegistrationDto;
 import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.repository.UserRepository;
+import com.project.expenseTracker.request.LoginRequest;
+import com.project.expenseTracker.request.UserRequest;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.AllArgsConstructor;
@@ -32,15 +34,16 @@ public class UserService {
     private UserDetailsService userDetailsService;
     private UserRepository userRepository;
 
-    public void registerUser(UserRegistrationDto registrationDto) {
-        if (userRepository.findByEmail(registrationDto.getEmail()).isPresent()) {
+    public void registerUser(UserRegistrationDto userDto) {
+        if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email is already registered!");
         }
 
         User user = new User();
-        user.setName(registrationDto.getName());
-        user.setEmail(registrationDto.getEmail());
-        user.setPassword(passwordEncoder.encode(registrationDto.getPassword()));
+        user.setName(userDto.getName());
+        user.setEmail(userDto.getEmail());
+        user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        user.setEarning(userDto.getEarning());
         userRepository.save(user);
     }
 

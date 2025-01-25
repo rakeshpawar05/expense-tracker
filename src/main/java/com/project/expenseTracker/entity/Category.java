@@ -8,14 +8,12 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Entity
-@Table(name = "categories")
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+//    @Column(name = "category_id")
     private Long id;
 
     @Column(nullable = false, unique = true)
@@ -24,6 +22,10 @@ public class Category {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "month_id", nullable = false)
+    private Month month;
 
     @OneToMany(mappedBy = "category")
     private List<Expense> expenses;
