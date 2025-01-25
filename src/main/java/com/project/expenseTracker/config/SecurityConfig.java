@@ -25,47 +25,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
-//    private final JwtAuthFilter jwtAuthenticationFilter;
-//    private final DefaultSecurityFilterChain build;
-
-//    @Bean
-//    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(AbstractHttpConfigurer::disable) // Disable CSRF protection
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/auth/**").permitAll() // Allow unauthenticated access to auth endpoints
-//                        .anyRequest().authenticated() // Protect all other endpoints
-//                )
-//
-//                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
-//
-//    @Bean
-//    public PasswordEncoder passwordEncoder() {
-//        return new BCryptPasswordEncoder();
-//    }
-//
-//    @Bean
-//    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
-//        return configuration.getAuthenticationManager();
-//    }
-
-//    @Bean
-//    public AuthenticationProvider authenticationProvider() {
-//        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
-//        authenticationProvider.setUserDetailsService(userDetailsService());
-//        authenticationProvider.setPasswordEncoder(passwordEncoder());
-//        return authenticationProvider;
-//    }
-
-//    @Bean
-//    public UserDetailsService userDetailsService() {
-//        return new UserInfoService(); // Ensure UserInfoService implements UserDetailsService
-//    }
-
-
     @Autowired
     private JwtAuthFilter authFilter;
 

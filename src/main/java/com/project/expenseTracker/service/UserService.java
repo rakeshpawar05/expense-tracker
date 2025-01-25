@@ -24,64 +24,10 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-//@AllArgsConstructor
 public class UserService implements UserDetailsService {
-
-//    private static final String SECRET_KEY = "kD4hT9lJpQ2uV3xF1Lp0dY1oQe3K2gF5P7vY0T9nK4hH4qH7sW";
-//
-//    private AuthenticationManager authenticationManager;
-//    private PasswordEncoder passwordEncoder;
-//    private UserDetailsService userDetailsService;
-//    private UserRepository userRepository;
-
-//    public void registerUser(UserDto userDto) {
-//        if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
-//            throw new IllegalArgumentException("Email is already registered!");
-//        }
-//
-//        User user = new User();
-//        user.setName(userDto.getName());
-//        user.setEmail(userDto.getEmail());
-//        user.setPassword(passwordEncoder.encode(userDto.getPassword()));
-//        user.setEarning(userDto.getEarning());
-//        userRepository.save(user);
-//    }
-
-//    public String login(AuthRequest authRequest) {
-//        authenticationManager.authenticate(
-//                new UsernamePasswordAuthenticationToken(authRequest.getUserName(), authRequest.getPassword())
-//        );
-//
-//        UserDetails userDetails = userDetailsService.loadUserByUsername(authRequest.getUserName());
-//        return generateToken(userDetails);
-//    }
-
-//    public String authenticate(AuthRequest loginDto) {
-//        Authentication authentication = authenticationManager.authenticate(
-//                new UsernamePasswordAuthenticationToken(loginDto.getEmail(), loginDto.getPassword())
-//        );
-//
-//        SecurityContextHolder.getContext().setAuthentication(authentication);
-//        return jwtTokenProvider.generateToken(authentication);
-//    }
-
-//    private String generateToken(UserDetails userDetails) {
-//        Map<String, Object> claims = new HashMap<>();
-//        return Jwts.builder()
-//                .setClaims(claims)
-//                .setSubject(userDetails.getUsername())
-//                .setIssuedAt(new Date(System.currentTimeMillis()))
-//                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 hours
-//                .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
-//                .compact();
-//    }
-
 
     @Autowired
     private UserRepository repository;
-
-//    @Autowired
-//    private PasswordEncoder encoder;
 
     @Autowired
     private ModelMapper modelMapper;
@@ -95,13 +41,10 @@ public class UserService implements UserDetailsService {
             throw new UsernameNotFoundException("User not found: " + username);
         }
         return new UserInfoDetails(modelMapper.map(userDetail, UserDto.class));
-//        return userDetail.map(UserInfoDetails::new)
-//                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 
     public String addUser(UserDto userDto) {
         // Encode password before saving the user
-//        userDto.setPassword(encoder.encode(userDto.getPassword()));
         User user = new User();
         user.setName(userDto.getName());
         user.setEmail(userDto.getEmail());
