@@ -20,8 +20,10 @@ public class ExpenseController {
     }
 
     @GetMapping
-    public List<ExpenseDto> getExpensesByMonth(@RequestParam Long monthId){
-        return expenseService.getExpenseByMonth(monthId);
+    public List<ExpenseDto> getExpenses(@RequestParam(required = false) String monthName,
+                                        @RequestParam(required = false) String categoryName,
+                                        @RequestParam(required = false) String expenseName){
+        return expenseService.getExpenses(monthName, categoryName, expenseName);
     }
 
     @PostMapping

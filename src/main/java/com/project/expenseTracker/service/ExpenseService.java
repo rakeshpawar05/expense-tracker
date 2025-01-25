@@ -44,8 +44,10 @@ public class ExpenseService {
         return mapEntityToDTo(expense);
     }
 
-    public List<ExpenseDto> getExpenseByMonth(Long monthId){
-        List<Expense> expenses = expenseRepository.findByMonthId(monthId);
+    public List<ExpenseDto> getExpenses(String monthName, String categoryName, String expenseName){
+
+
+        List<Expense> expenses = expenseRepository.findByFilters(monthName, categoryName, expenseName);
         return expenses.stream().map(ExpenseService::mapEntityToDTo).toList();
     }
 

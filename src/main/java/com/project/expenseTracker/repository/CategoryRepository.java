@@ -10,4 +10,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findByMonthId(long monthId);
 
     void deleteByMonthId(Long monthId);
+
+    List<Category> findByMonthName(String monthName);
 }
