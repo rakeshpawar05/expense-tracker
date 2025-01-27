@@ -40,4 +40,9 @@ public class ExpenseController {
     public long deleteExpense(@PathVariable Long id){
         return expenseService.deleteExpenseById(id);
     }
+
+    @GetMapping("/top5")
+    public List<ExpenseDto> getTop5ByMonth(@RequestParam String monthName) {
+        return expenseService.getTop5ByMonth(monthName);
+    }
 }

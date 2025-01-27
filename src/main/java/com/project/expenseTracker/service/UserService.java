@@ -1,6 +1,8 @@
 package com.project.expenseTracker.service;
 
+import com.project.expenseTracker.dto.AuthRequest;
 import com.project.expenseTracker.dto.UserDto;
+import com.project.expenseTracker.dto.UserResponseDto;
 import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.repository.UserRepository;
 import com.project.expenseTracker.security.UserInfoDetails;
@@ -42,5 +44,20 @@ public class UserService implements UserDetailsService {
         user.setEarning(userDto.getEarning());
         repository.save(user);
         return "User Added Successfully";
+    }
+
+    public UserResponseDto getUserResponse(AuthRequest authRequest, String token){
+        Optional<User> userDetail = repository.findByEmail(authRequest.getUserName()); // Assuming 'email' is used as username
+
+        // Converting UserInfo to UserDetails
+        if(userDetail.isEmpty()){
+            throw new UsernameNotFoundException("User not found: " + authRequest.getUserName());
+        }
+
+        return UserResponseDto.builder()
+                .name(userDetail.get().getName())
+                .userId(userDetail.get().getId())
+                .token(token)
+                .build();
     }
 }

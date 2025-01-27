@@ -20,6 +20,11 @@ public class MonthController {
         return monthService.getMonthById(id);
     }
 
+    @GetMapping("/name")
+    public MonthDto getMonthByName(@RequestParam String monthName){
+        return monthService.getMonthByName(monthName);
+    }
+
     @GetMapping
     public List<MonthDto> getMonths(@RequestParam Long userId){
         return monthService.getMonthByUserId(userId);
@@ -33,6 +38,11 @@ public class MonthController {
     @PutMapping("/{id}")
     public MonthDto updateMonth(@RequestBody MonthDto monthDto, @PathVariable Long id){
         return monthService.updateMonth(id, monthDto);
+    }
+
+    @GetMapping("/{userId}/getNames")
+    public List<String> getMonthNamesByUserId(@PathVariable Long userId){
+       return monthService.getMonthNamesByUserId(userId);
     }
 
     @GetMapping("/{id}/amount")

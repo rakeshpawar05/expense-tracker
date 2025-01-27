@@ -2,6 +2,7 @@ package com.project.expenseTracker.controller;
 
 import com.project.expenseTracker.dto.AuthRequest;
 import com.project.expenseTracker.dto.UserDto;
+import com.project.expenseTracker.dto.UserResponseDto;
 import com.project.expenseTracker.security.JwtService;
 import com.project.expenseTracker.service.UserService;
 import lombok.AllArgsConstructor;
@@ -32,14 +33,14 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public String authenticateAndGetToken(@RequestBody AuthRequest authRequest) {
+    public UserResponseDto authenticateAndGetToken(@RequestBody AuthRequest authRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(authRequest.getUserName(), authRequest.getPassword())
         );
-        if (authentication.isAuthenticated()) {
-            return jwtService.generateToken(authRequest.getUserName());
-        } else {
+        if (!authentication.isAuthenticated()) {
             throw new UsernameNotFoundException("Invalid user request!");
         }
+        String token = jwtService.generateToken(authRequest.getUserName());
+        return userService.getUserResponse(authRequest, token);
     }
 }

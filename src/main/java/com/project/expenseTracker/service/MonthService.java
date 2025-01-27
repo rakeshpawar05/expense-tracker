@@ -13,12 +13,18 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class MonthService {
+
+    private final List<String> monthList = Arrays.asList("January", "February", "March", "April",
+            "May", "June", "July", "August", "September",
+            "October", "November", "December");
 
     private final MonthRepository monthRepository;
     private final UserRepository userRepository;
@@ -92,4 +98,19 @@ public class MonthService {
                 .expenses(month.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList())
                 .build();
     }
+
+    public List<String> getMonthNamesByUserId(Long userId) {
+        List<Month> months = monthRepository.findByUserId(userId);
+        return months.stream().sorted(Comparator.comparingInt(
+                month -> java.time.Month.valueOf(month.getName().toUpperCase()).getValue()))
+                .map(month -> month.getName() + "," + month.getYear()).toList();
+    }
+
+    public MonthDto getMonthByName(String name) {
+        Month month = monthRepository.findByNameAndYear(name.split(",")[0],
+                Integer.parseInt(name.split(",")[1])).orElseThrow(
+                () -> new ResourceNotFoundException("Month not found"));
+        return mapEntityToDto(month);
+    }
+
 }

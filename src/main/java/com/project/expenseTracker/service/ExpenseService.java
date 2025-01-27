@@ -11,6 +11,7 @@ import com.project.expenseTracker.repository.MonthRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -93,5 +94,14 @@ public class ExpenseService {
                 .monthName(expense.getMonth().getName() +","+ expense.getMonth().getYear())
                 .categoryName(expense.getCategory() != null ? expense.getCategory().getName() : null)
                 .build();
+    }
+
+    public List<ExpenseDto> getTop5ByMonth(String monthName){
+        Month month = monthRepository.findByNameAndYear(monthName.split(",")[0],
+                Integer.parseInt(monthName.split(",")[1])).orElseThrow(
+                () -> new ResourceNotFoundException("Month not found"));
+
+        return month.getExpenses().stream().sorted(Comparator.comparing(Expense::getAmount).reversed()).limit(5).
+    map(ExpenseService::mapEntityToDTo).toList();
     }
 }
