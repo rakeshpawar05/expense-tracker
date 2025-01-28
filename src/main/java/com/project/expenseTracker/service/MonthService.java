@@ -4,6 +4,7 @@ import com.project.expenseTracker.dto.MonthDto;
 import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
 import com.project.expenseTracker.entity.User;
+import com.project.expenseTracker.exception.DuplicateResourceException;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.CategoryRepository;
 import com.project.expenseTracker.repository.ExpenseRepository;
@@ -33,6 +34,11 @@ public class MonthService {
 
     public Long createMonth(MonthDto monthDto){
         User user = userRepository.findById(monthDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        Optional<Month> existingMonth = monthRepository.findByNameAndYear(monthDto.getName().split(",")[0],
+                Integer.parseInt(monthDto.getName().split(",")[1]));
+        if(existingMonth.isPresent()){
+            throw new DuplicateResourceException("Month already exist");
+        }
         Month month = mapDtoToEntity(null, monthDto, user);
         return monthRepository.save(month).getId();
     }
