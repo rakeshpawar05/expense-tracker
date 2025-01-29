@@ -1,13 +1,12 @@
 package com.project.expenseTracker.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,10 +25,12 @@ public class Expense {
     @Column(nullable = false)
     private String date;
 
+    @JsonManagedReference
     @ManyToOne
     @JoinColumn(name = "month_id", nullable = false)
     private Month month;
 
+    @JsonManagedReference
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;

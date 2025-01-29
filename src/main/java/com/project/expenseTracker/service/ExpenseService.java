@@ -38,6 +38,7 @@ public class ExpenseService {
     public ExpenseDto updateExpense(ExpenseDto expenseDto, Long expenseId){
         Expense existingExpense = expenseRepository.findById(expenseId).orElseThrow(
                 () -> new ResourceNotFoundException("Expense not found"));
+        Month month = existingExpense.getMonth();
         Expense expense = expenseRepository.save(mapDtoToEntity(existingExpense, expenseDto, null, null));
         return mapEntityToDTo(expense);
     }
@@ -75,6 +76,7 @@ public class ExpenseService {
             existingExpense.setDescription(expenseDto.getDescription());
             existingExpense.setAmount(expenseDto.getAmount());
             existingExpense.setDate(expenseDto.getDate());
+            return existingExpense;
         }
         return Expense.builder()
                 .amount(expenseDto.getAmount())

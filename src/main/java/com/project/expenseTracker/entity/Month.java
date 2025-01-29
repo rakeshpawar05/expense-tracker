@@ -1,15 +1,15 @@
 package com.project.expenseTracker.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
 @Entity
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
@@ -27,13 +27,16 @@ public class Month {
     @Column
     private Double earning;
 
+    @JsonManagedReference
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
+    @JsonBackReference
     @OneToMany(mappedBy = "month", orphanRemoval = true)
     private List<Category> categories;
 
+    @JsonBackReference
     @OneToMany(mappedBy = "month", orphanRemoval = true)
     private List<Expense> expenses;
 }
