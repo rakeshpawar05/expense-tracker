@@ -49,8 +49,9 @@ public class CategoryService {
         return mapEntityToDto(category);
     }
 
-    public List<CategoryDto> getCategoryByMonthId(Long monthId){
-        List<Category> categories = categoryRepository.findByMonthId(monthId);
+    public List<CategoryDto> getCategoryByMonthId(String monthName){
+        List<Category> categories = categoryRepository.findByMonthNameAndMonthYear(monthName.split(",")[0],
+                Integer.parseInt(monthName.split(",")[1]));
         return categories.stream().map(CategoryService::mapEntityToDto).toList();
     }
 

@@ -19,7 +19,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     @Query("""
     select e from Expense e
     join Month m on m.id=e.month.id
-    join Category c on c.id=e.category.id
+    left join Category c on c.id=e.category.id
     where (:monthName is null or m.name=:monthName)
     and (:monthYear is null or m.year=:monthYear)
     and (:categoryName is null or c.name=:categoryName)
