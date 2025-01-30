@@ -34,6 +34,6 @@ public class Category {
     private Month month;
 
     @JsonBackReference
-    @OneToMany(mappedBy = "category", orphanRemoval = true)
+    @OneToMany(mappedBy = "category")
     private List<Expense> expenses;
 }

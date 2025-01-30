@@ -1,14 +1,19 @@
 package com.project.expenseTracker.service;
 
 import com.project.expenseTracker.dto.ExpenseDto;
+import com.project.expenseTracker.dto.MonthDto;
 import com.project.expenseTracker.entity.Category;
 import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
+import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.CategoryRepository;
 import com.project.expenseTracker.repository.ExpenseRepository;
 import com.project.expenseTracker.repository.MonthRepository;
+import com.project.expenseTracker.repository.UserRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -22,16 +27,34 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final MonthRepository monthRepository;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
+    private final MonthService monthService;
 
     public long createExpense(ExpenseDto expenseDto){
 
-        Month month = monthRepository.findByNameAndYear(expenseDto.getMonthName().split(",")[0],
-                Integer.parseInt(expenseDto.getMonthName().split(",")[1])).orElseThrow(
-                () -> new ResourceNotFoundException("Month not found"));
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentPrincipalName = authentication.getName();
+        System.out.println("user " + currentPrincipalName);
 
-        Optional<Category> category = categoryRepository.findByNameAndMonthId(expenseDto.getCategoryName(), month.getId());
+        User user = userRepository.findByEmail(currentPrincipalName).orElseThrow(
+                () -> new ResourceNotFoundException("User not found")
+        );
 
-        Expense expense = mapDtoToEntity(null, expenseDto, month, category.orElse(null));
+        String monthName = expenseDto.getMonthName().split(",")[0];
+        int year = Integer.parseInt(expenseDto.getMonthName().split(",")[1]);
+        Optional<Month> month = monthRepository.findByNameAndYear(monthName,year);
+        if(month.isEmpty()){
+            
+            Long createdMonthId = monthService.createMonth(MonthDto.builder()
+                    .name(expenseDto.getMonthName())
+                    .userId(user.getId())
+                    .build());
+            month = monthRepository.findById(createdMonthId);
+        }
+
+        Optional<Category> category = categoryRepository.findByNameAndMonthId(expenseDto.getCategoryName(), month.get().getId());
+
+        Expense expense = mapDtoToEntity(null, expenseDto, month.get(), category.orElse(null));
         return expenseRepository.save(expense).getId();
     }
 
