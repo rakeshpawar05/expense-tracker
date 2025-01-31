@@ -19,9 +19,6 @@ public class MonthDto {
     @NotBlank(message = "Month name is required")
     private String name;
 
-//    @NotNull
-//    private Integer year;
-
     @NotNull(message = "Earning is required")
     @Min(value = 0, message = "Earning must be greater than or equal to 0")
     private Double earning;

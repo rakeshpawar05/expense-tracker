@@ -1,9 +1,11 @@
 package com.project.expenseTracker.service;
 
 import com.project.expenseTracker.dto.AuthRequest;
+import com.project.expenseTracker.dto.UserDomainDto;
 import com.project.expenseTracker.dto.UserDto;
 import com.project.expenseTracker.dto.UserResponseDto;
 import com.project.expenseTracker.entity.User;
+import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.UserRepository;
 import com.project.expenseTracker.security.UserInfoDetails;
 import org.modelmapper.ModelMapper;
@@ -41,7 +43,7 @@ public class UserService implements UserDetailsService {
         user.setName(userDto.getName());
         user.setEmail(userDto.getEmail());
         user.setPassword(userDto.getPassword());
-        user.setEarning(userDto.getEarning());
+//        user.setEarning(userDto.getEarning());
         repository.save(user);
         return "User Added Successfully";
     }
@@ -58,6 +60,21 @@ public class UserService implements UserDetailsService {
                 .name(userDetail.get().getName())
                 .userId(userDetail.get().getId())
                 .token(token)
+                .build();
+    }
+
+    public UserDomainDto getUserInfo(Long id){
+        User user = repository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return mapEntityToDto(user);
+    }
+
+    public static UserDomainDto mapEntityToDto(User user){
+        return UserDomainDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .months(user.getMonths().stream().map(MonthService::mapEntityToDto).toList())
+                .categories(user.getCategories().stream().map(CategoryService::mapEntityToDto).toList())
+                .expenses(user.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList())
                 .build();
     }
 }

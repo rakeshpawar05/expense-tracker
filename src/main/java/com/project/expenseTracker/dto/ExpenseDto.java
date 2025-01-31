@@ -27,6 +27,9 @@ public class ExpenseDto {
     @NotNull(message = "Month Name is required")
     private String monthName;
 
-    @NotNull(message = "Category Name is required")
+//    @NotNull(message = "Category Name is required")
     private String categoryName;
+
+    @NotNull(message = "userId is required")
+    private Long userId;
 }

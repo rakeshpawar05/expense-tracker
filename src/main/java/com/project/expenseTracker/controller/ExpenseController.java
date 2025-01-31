@@ -20,10 +20,11 @@ public class ExpenseController {
     }
 
     @GetMapping
-    public List<ExpenseDto> getExpenses(@RequestParam(required = false) String monthName,
+    public List<ExpenseDto> getExpenses(@RequestParam Long userId,
+                                        @RequestParam(required = false) String monthName,
                                         @RequestParam(required = false) String categoryName,
                                         @RequestParam(required = false) String expenseName){
-        return expenseService.getExpenses(monthName, categoryName, expenseName);
+        return expenseService.getExpenses(userId, monthName, categoryName, expenseName);
     }
 
     @PostMapping
@@ -42,7 +43,7 @@ public class ExpenseController {
     }
 
     @GetMapping("/top5")
-    public List<ExpenseDto> getTop5ByMonth(@RequestParam String monthName) {
-        return expenseService.getTop5ByMonth(monthName);
+    public List<ExpenseDto> getTop5ByMonth(@RequestParam Long userId, @RequestParam String monthName) {
+        return expenseService.getTop5ByMonth(userId, monthName);
     }
 }

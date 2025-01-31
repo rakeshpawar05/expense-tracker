@@ -15,6 +15,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import static com.project.expenseTracker.service.MonthService.getMonthName;
+import static com.project.expenseTracker.service.MonthService.getMonthYear;
+
 @Service
 @AllArgsConstructor
 public class CategoryService {
@@ -27,8 +30,8 @@ public class CategoryService {
     public Long createCategory(CategoryDto categoryDto){
         User user = userRepository.findById(categoryDto.getUserId()).orElseThrow(
                 () -> new ResourceNotFoundException("User not found"));
-        Month month = monthRepository.findByNameAndYear(categoryDto.getMonthName().split(",")[0],
-                Integer.parseInt(categoryDto.getMonthName().split(",")[1])).orElseThrow(
+        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(categoryDto.getMonthName()),
+                getMonthYear(categoryDto.getMonthName()), user.getId()).orElseThrow(
                 () -> new ResourceNotFoundException("Month not found"));
 
         Category category = mapDtoToEntity(null, categoryDto, user, month);

@@ -27,7 +27,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    private Double earning;
+//    private Double earning;
 
     @JsonBackReference
     @OneToMany(mappedBy = "user", orphanRemoval = true)
@@ -36,4 +36,8 @@ public class User {
     @JsonBackReference
     @OneToMany(mappedBy = "user", orphanRemoval = true)
     private List<Category> categories;
+
+    @JsonBackReference
+    @OneToMany(mappedBy = "user", orphanRemoval = true)
+    private List<Expense> expenses;
 }

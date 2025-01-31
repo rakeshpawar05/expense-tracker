@@ -20,6 +20,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+import static com.project.expenseTracker.service.MonthService.getMonthName;
+import static com.project.expenseTracker.service.MonthService.getMonthYear;
+
 @Service
 @AllArgsConstructor
 public class ExpenseService {
@@ -32,37 +35,39 @@ public class ExpenseService {
 
     public long createExpense(ExpenseDto expenseDto){
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String currentPrincipalName = authentication.getName();
-        System.out.println("user " + currentPrincipalName);
+//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+//        String currentPrincipalName = authentication.getName();
+//        System.out.println("user " + currentPrincipalName);
 
-        User user = userRepository.findByEmail(currentPrincipalName).orElseThrow(
+        User user = userRepository.findById(expenseDto.getUserId()).orElseThrow(
                 () -> new ResourceNotFoundException("User not found")
         );
 
-        String monthName = expenseDto.getMonthName().split(",")[0];
-        int year = Integer.parseInt(expenseDto.getMonthName().split(",")[1]);
-        Optional<Month> month = monthRepository.findByNameAndYear(monthName,year);
-        if(month.isEmpty()){
-            
-            Long createdMonthId = monthService.createMonth(MonthDto.builder()
-                    .name(expenseDto.getMonthName())
-                    .userId(user.getId())
-                    .build());
-            month = monthRepository.findById(createdMonthId);
-        }
+//        String monthName = expenseDto.getMonthName().split(",")[0];
+//        int year = Integer.parseInt(expenseDto.getMonthName().split(",")[1]);
+        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(expenseDto.getMonthName())
+                ,getMonthYear(expenseDto.getMonthName()), user.getId()).orElseThrow(
+                () -> new ResourceNotFoundException("Month not found")
+        );
+//        if(month.isEmpty()){
+//            Long createdMonthId = monthService.createMonth(MonthDto.builder()
+//                    .name(expenseDto.getMonthName())
+//                    .userId(user.getId())
+//                    .build());
+//            month = monthRepository.findById(createdMonthId);
+//        }
 
-        Optional<Category> category = categoryRepository.findByNameAndMonthId(expenseDto.getCategoryName(), month.get().getId());
+        Optional<Category> category = categoryRepository.findByNameAndMonthIdAndUserId(expenseDto.getCategoryName(), month.getId(), user.getId());
 
-        Expense expense = mapDtoToEntity(null, expenseDto, month.get(), category.orElse(null));
+        Expense expense = mapDtoToEntity(null, expenseDto, month, category.orElse(null), user);
         return expenseRepository.save(expense).getId();
     }
 
     public ExpenseDto updateExpense(ExpenseDto expenseDto, Long expenseId){
         Expense existingExpense = expenseRepository.findById(expenseId).orElseThrow(
                 () -> new ResourceNotFoundException("Expense not found"));
-        Month month = existingExpense.getMonth();
-        Expense expense = expenseRepository.save(mapDtoToEntity(existingExpense, expenseDto, null, null));
+//        Month month = existingExpense.getMonth();
+        Expense expense = expenseRepository.save(mapDtoToEntity(existingExpense, expenseDto, null, null, null));
         return mapEntityToDTo(expense);
     }
 
@@ -72,29 +77,29 @@ public class ExpenseService {
         return mapEntityToDTo(expense);
     }
 
-    public List<ExpenseDto> getExpenses(String monthName, String categoryName, String expenseName){
-        String name = null;
-        Integer year = null;
-        if(monthName != null){
-            name = monthName.split(",")[0];
-            year = Integer.parseInt(monthName.split(",")[1]);
-        }
+    public List<ExpenseDto> getExpenses(Long userId, String monthName, String categoryName, String expenseName){
+//        String name = null;
+//        Integer year = null;
+//        if(monthName != null){
+//            name = monthName.split(",")[0];
+//            year = Integer.parseInt(monthName.split(",")[1]);
+//        }
 
-        List<Expense> expenses = expenseRepository.findByFilters(name, year, categoryName, expenseName);
+        List<Expense> expenses = expenseRepository.findByFilters(userId, getMonthName(monthName), getMonthYear(monthName), categoryName, expenseName);
         return expenses.stream().map(ExpenseService::mapEntityToDTo).toList();
     }
 
-    public List<ExpenseDto> getExpenseByCategory(Long categoryId){
-        List<Expense> expenses = expenseRepository.findByCategoryId(categoryId);
-        return expenses.stream().map(ExpenseService::mapEntityToDTo).toList();
-    }
+//    public List<ExpenseDto> getExpenseByCategory(Long categoryId){
+//        List<Expense> expenses = expenseRepository.findByCategoryId(categoryId);
+//        return expenses.stream().map(ExpenseService::mapEntityToDTo).toList();
+//    }
 
     public long deleteExpenseById(Long id){
         expenseRepository.deleteById(id);
         return id;
     }
 
-    private Expense mapDtoToEntity(Expense existingExpense, ExpenseDto expenseDto, Month month, Category category) {
+    private Expense mapDtoToEntity(Expense existingExpense, ExpenseDto expenseDto, Month month, Category category, User user) {
         if(existingExpense != null){
             existingExpense.setDescription(expenseDto.getDescription());
             existingExpense.setAmount(expenseDto.getAmount());
@@ -107,6 +112,7 @@ public class ExpenseService {
                 .date(expenseDto.getDate())
                 .month(month)
                 .category(category)
+                .user(user)
                 .build();
     }
 
@@ -118,12 +124,13 @@ public class ExpenseService {
                 .date(expense.getDate())
                 .monthName(expense.getMonth().getName() +","+ expense.getMonth().getYear())
                 .categoryName(expense.getCategory() != null ? expense.getCategory().getName() : null)
+                .userId(expense.getUser().getId())
                 .build();
     }
 
-    public List<ExpenseDto> getTop5ByMonth(String monthName){
-        Month month = monthRepository.findByNameAndYear(monthName.split(",")[0],
-                Integer.parseInt(monthName.split(",")[1])).orElseThrow(
+    public List<ExpenseDto> getTop5ByMonth(Long userId, String monthName){
+        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(monthName),
+                getMonthYear(monthName), userId).orElseThrow(
                 () -> new ResourceNotFoundException("Month not found"));
 
         return month.getExpenses().stream().sorted(Comparator.comparing(Expense::getAmount).reversed()).limit(5).

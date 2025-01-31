@@ -12,7 +12,7 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     void deleteByMonthId(Long monthId);
 
-    Optional<Category> findByNameAndMonthId(String name, long monthId);
+    Optional<Category> findByNameAndMonthIdAndUserId(String name, long monthId, long userId);
 
     List<Category> findByMonthNameAndMonthYear(String monthName, int year);
 }

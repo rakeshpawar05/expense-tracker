@@ -24,8 +24,9 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     and (:monthYear is null or m.year=:monthYear)
     and (:categoryName is null or c.name=:categoryName)
     and (:expenseName is null or e.description=:expenseName)
+    and (:userId is null or e.user.id=:userId)
     """)
-    List<Expense> findByFilters(String monthName,Integer monthYear, String categoryName, String expenseName);
+    List<Expense> findByFilters(Long userId, String monthName,Integer monthYear, String categoryName, String expenseName);
 
     List<Expense> findByMonthName(String monthName);
     List<Expense> findByCategoryName(String categoryName);

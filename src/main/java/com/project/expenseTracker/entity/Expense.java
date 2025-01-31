@@ -34,4 +34,9 @@ public class Expense {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @JsonManagedReference
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 }
