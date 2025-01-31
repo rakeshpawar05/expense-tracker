@@ -44,7 +44,6 @@ public class UserController {
 
     @GetMapping("/users/{userId}")
     public UserDomainDto getUserInfo(@PathVariable Long userId){
-        //TODO: add service logic
         return  userService.getUserInfo(userId);
     }
 }
