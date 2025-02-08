@@ -14,5 +14,5 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Optional<Category> findByNameAndMonthIdAndUserId(String name, long monthId, long userId);
 
-    List<Category> findByMonthNameAndMonthYear(String monthName, int year);
+    List<Category> findByMonthNameAndMonthYearAndUserId(String monthName, int year, long userId);
 }

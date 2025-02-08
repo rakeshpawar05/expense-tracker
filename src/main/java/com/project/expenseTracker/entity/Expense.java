@@ -37,6 +37,11 @@ public class Expense {
 
     @JsonManagedReference
     @ManyToOne
+    @JoinColumn(name = "event_id")
+    private Event event;
+
+    @JsonManagedReference
+    @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 }

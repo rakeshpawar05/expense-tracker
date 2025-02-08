@@ -5,6 +5,7 @@ import com.project.expenseTracker.dto.UserDomainDto;
 import com.project.expenseTracker.dto.UserDto;
 import com.project.expenseTracker.dto.UserResponseDto;
 import com.project.expenseTracker.entity.User;
+import com.project.expenseTracker.exception.DuplicateResourceException;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.UserRepository;
 import com.project.expenseTracker.security.UserInfoDetails;
@@ -44,6 +45,13 @@ public class UserService implements UserDetailsService {
         user.setEmail(userDto.getEmail());
         user.setPassword(userDto.getPassword());
 //        user.setEarning(userDto.getEarning());
+        Optional<User> optionalUser = repository.findByEmail(user.getEmail());
+        if(optionalUser.isPresent()){
+            throw new DuplicateResourceException("User already registered");
+        }
+//                .(
+//                () -> new DuplicateResourceException("User already register")
+//        );
         repository.save(user);
         return "User Added Successfully";
     }

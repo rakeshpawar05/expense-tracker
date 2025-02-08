@@ -21,8 +21,8 @@ public class CategoryController {
     }
 
     @GetMapping
-    public List<CategoryDto> getCategoriesByMonthName(@RequestParam String monthName){
-        return categoryService.getCategoryByMonthId(monthName);
+    public List<CategoryDto> getCategoriesByMonthName(@RequestParam Long userId, @RequestParam String monthName){
+        return categoryService.getCategoryByMonthId(userId, monthName);
     }
 
     @PostMapping

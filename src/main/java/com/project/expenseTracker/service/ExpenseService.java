@@ -1,16 +1,12 @@
 package com.project.expenseTracker.service;
 
+import com.project.expenseTracker.dto.CategoryDto;
 import com.project.expenseTracker.dto.ExpenseDto;
 import com.project.expenseTracker.dto.MonthDto;
-import com.project.expenseTracker.entity.Category;
-import com.project.expenseTracker.entity.Expense;
-import com.project.expenseTracker.entity.Month;
-import com.project.expenseTracker.entity.User;
+import com.project.expenseTracker.entity.*;
+import com.project.expenseTracker.exception.InvalidRequestException;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
-import com.project.expenseTracker.repository.CategoryRepository;
-import com.project.expenseTracker.repository.ExpenseRepository;
-import com.project.expenseTracker.repository.MonthRepository;
-import com.project.expenseTracker.repository.UserRepository;
+import com.project.expenseTracker.repository.*;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,8 +28,10 @@ public class ExpenseService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final MonthService monthService;
+    private final CategoryService categoryService;
+    private final EventRepository eventRepository;
 
-    public long createExpense(ExpenseDto expenseDto){
+    public long createExpense(ExpenseDto expenseDto) {
 
 //        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 //        String currentPrincipalName = authentication.getName();
@@ -45,21 +43,40 @@ public class ExpenseService {
 
 //        String monthName = expenseDto.getMonthName().split(",")[0];
 //        int year = Integer.parseInt(expenseDto.getMonthName().split(",")[1]);
-        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(expenseDto.getMonthName())
-                ,getMonthYear(expenseDto.getMonthName()), user.getId()).orElseThrow(
-                () -> new ResourceNotFoundException("Month not found")
-        );
-//        if(month.isEmpty()){
-//            Long createdMonthId = monthService.createMonth(MonthDto.builder()
-//                    .name(expenseDto.getMonthName())
-//                    .userId(user.getId())
-//                    .build());
-//            month = monthRepository.findById(createdMonthId);
-//        }
+        Optional<Month> monthOptional = monthRepository.findByNameAndYearAndUserId(getMonthName(expenseDto.getMonthName())
+                , getMonthYear(expenseDto.getMonthName()), user.getId());
+//                .orElseThrow(
+//                () -> new ResourceNotFoundException("Month not found")
+//        );
+        Month month;
+        if (monthOptional.isEmpty()) {
+            Long monthId = monthService.createMonth(MonthDto.builder()
+                    .name(expenseDto.getMonthName())
+                    .userId(user.getId())
+                    .build());
+            month = monthRepository.findById(monthId).orElseThrow(
+                    () -> new InvalidRequestException("Couldn't create new month")
+            );
+        } else {
+            month = monthOptional.get();
+        }
 
-        Optional<Category> category = categoryRepository.findByNameAndMonthIdAndUserId(expenseDto.getCategoryName(), month.getId(), user.getId());
+        Optional<Category> category = Optional.empty();
+        if (!expenseDto.getCategoryName().isEmpty()) {
+            category = categoryRepository.findByNameAndMonthIdAndUserId(expenseDto.getCategoryName(), month.getId(), user.getId());
+            if(category.isEmpty()){
+                Long categoryId = categoryService.createCategory(CategoryDto.builder()
+                        .name(expenseDto.getCategoryName())
+                        .userId(user.getId())
+                        .monthName(expenseDto.getMonthName())
+                        .build());
+                category = categoryRepository.findById(categoryId);
+            }
+        }
 
-        Expense expense = mapDtoToEntity(null, expenseDto, month, category.orElse(null), user);
+        Optional<Event> event = eventRepository.findByName(expenseDto.getEventName());
+
+        Expense expense = mapDtoToEntity(null, expenseDto, month, category.orElse(null), user, event.orElse(null));
         return expenseRepository.save(expense).getId();
     }
 
@@ -67,7 +84,7 @@ public class ExpenseService {
         Expense existingExpense = expenseRepository.findById(expenseId).orElseThrow(
                 () -> new ResourceNotFoundException("Expense not found"));
 //        Month month = existingExpense.getMonth();
-        Expense expense = expenseRepository.save(mapDtoToEntity(existingExpense, expenseDto, null, null, null));
+        Expense expense = expenseRepository.save(mapDtoToEntity(existingExpense, expenseDto, null, null, null, null));
         return mapEntityToDTo(expense);
     }
 
@@ -99,7 +116,7 @@ public class ExpenseService {
         return id;
     }
 
-    private Expense mapDtoToEntity(Expense existingExpense, ExpenseDto expenseDto, Month month, Category category, User user) {
+    private Expense mapDtoToEntity(Expense existingExpense, ExpenseDto expenseDto, Month month, Category category, User user, Event event) {
         if(existingExpense != null){
             existingExpense.setDescription(expenseDto.getDescription());
             existingExpense.setAmount(expenseDto.getAmount());
@@ -112,6 +129,7 @@ public class ExpenseService {
                 .date(expenseDto.getDate())
                 .month(month)
                 .category(category)
+                .event(event)
                 .user(user)
                 .build();
     }
