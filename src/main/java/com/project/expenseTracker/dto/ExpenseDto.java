@@ -30,6 +30,8 @@ public class ExpenseDto {
 //    @NotNull(message = "Category Name is required")
     private String categoryName;
 
+    private String eventName;
+
     @NotNull(message = "userId is required")
     private Long userId;
 }
