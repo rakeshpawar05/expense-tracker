@@ -109,6 +109,12 @@
 			<version>2.1.0</version> <!-- Ensure to use the latest stable version -->
 		</dependency>
 
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
 	</dependencies>
 
 	<build>
