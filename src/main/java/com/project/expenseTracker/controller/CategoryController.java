@@ -16,12 +16,12 @@ public class CategoryController {
     private CategoryService categoryService;
 
     @GetMapping("/{id}")
-    public CategoryDto getCategoryById(@PathVariable Long id){
+    public CategoryDto getCategoryById(@PathVariable("id") Long id){
         return categoryService.getCategoryById(id);
     }
 
     @GetMapping
-    public List<CategoryDto> getCategoriesByMonthName(@RequestParam Long userId, @RequestParam String monthName){
+    public List<CategoryDto> getCategoriesByMonthName(@RequestParam("userId") Long userId, @RequestParam("monthName") String monthName){
         return categoryService.getCategoryByMonthId(userId, monthName);
     }
 
@@ -31,17 +31,17 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
-    public CategoryDto updateCategory(@RequestBody CategoryDto categoryDto, @PathVariable Long id){
+    public CategoryDto updateCategory(@RequestBody CategoryDto categoryDto, @PathVariable("id") Long id){
         return categoryService.updateCategory(categoryDto, id);
     }
 
     @GetMapping("/{id}/amount")
-    public int getAmountById(@PathVariable Long id){
+    public int getAmountById(@PathVariable("id") Long id){
         return categoryService.getAmountById(id);
     }
 
     @DeleteMapping("/{id}")
-    public long deleteCategory(@PathVariable Long id){
+    public long deleteCategory(@PathVariable("id") Long id){
         return categoryService.deleteCategoryById(id);
     }
 }

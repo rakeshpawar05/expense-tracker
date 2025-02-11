@@ -16,12 +16,12 @@ public class EventController {
     private EventService EventService;
 
     @GetMapping("/{id}")
-    public EventDto getEventById(@PathVariable Long id){
+    public EventDto getEventById(@PathVariable("id") Long id){
         return EventService.getEventById(id);
     }
 
     @GetMapping
-    public List<EventDto> getEvents(@RequestParam Long userId){
+    public List<EventDto> getEvents(@RequestParam("userId") Long userId){
         return EventService.getEventByMonthId(userId);
     }
 
@@ -31,13 +31,13 @@ public class EventController {
     }
 
     @PutMapping("/{id}")
-    public EventDto updateEvent(@RequestBody EventDto EventDto, @PathVariable Long id){
+    public EventDto updateEvent(@RequestBody EventDto EventDto, @PathVariable("id") Long id){
         return EventService.updateEvent(EventDto, id);
     }
 
 
     @DeleteMapping("/{id}")
-    public long deleteEvent(@PathVariable Long id){
+    public long deleteEvent(@PathVariable("id") Long id){
         return EventService.deleteEventById(id);
     }
 }

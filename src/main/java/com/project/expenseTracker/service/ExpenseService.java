@@ -103,7 +103,7 @@ public class ExpenseService {
 //        }
 
         List<Expense> expenses = expenseRepository.findByFilters(userId, getMonthName(monthName), getMonthYear(monthName), categoryName, expenseName);
-        return expenses.stream().map(ExpenseService::mapEntityToDTo).toList();
+        return expenses.stream().map(ExpenseService::mapEntityToDTo).sorted(Comparator.comparing(ExpenseDto::getDate)).toList();
     }
 
 //    public List<ExpenseDto> getExpenseByCategory(Long categoryId){

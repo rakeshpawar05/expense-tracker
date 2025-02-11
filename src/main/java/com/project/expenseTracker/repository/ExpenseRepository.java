@@ -11,6 +11,7 @@ import java.util.List;
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     List<Expense> findByMonthId(Long monthId);
+    List<Expense> findByEventId(Long eventId);
 
     List<Expense> findByCategoryId(Long categoryId);
 

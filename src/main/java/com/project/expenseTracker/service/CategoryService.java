@@ -64,6 +64,11 @@ public class CategoryService {
     }
 
     public Long deleteCategoryById(Long id){
+        List<Expense> expenses = expenseRepository.findByCategoryId(id);
+        expenses.forEach(expense -> {
+            expense.setCategory(null);
+            expenseRepository.save(expense);
+        });
         categoryRepository.deleteById(id);
         return id;
     }

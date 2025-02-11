@@ -16,7 +16,7 @@ public class MonthController {
     private MonthService monthService;
 
     @GetMapping("/{id}")
-    public MonthDto getMonthById(@PathVariable Long id){
+    public MonthDto getMonthById(@PathVariable("id") Long id){
         return monthService.getMonthById(id);
     }
 
@@ -26,7 +26,8 @@ public class MonthController {
 //    }
 
     @GetMapping
-    public List<MonthDto> getMonths(@RequestParam Long userId, @RequestParam(required = false) String monthName){
+    public List<MonthDto> getMonths(@RequestParam("userId") Long userId,
+                                    @RequestParam(name = "monthName", required = false) String monthName){
         return monthService.getMonths(userId, monthName);
     }
 
@@ -36,12 +37,12 @@ public class MonthController {
     }
 
     @PutMapping("/{id}")
-    public MonthDto updateMonth(@RequestBody MonthDto monthDto, @PathVariable Long id){
+    public MonthDto updateMonth(@RequestBody MonthDto monthDto, @PathVariable("id") Long id){
         return monthService.updateMonth(id, monthDto);
     }
 
     @GetMapping("/getNames")
-    public List<String> getMonthNamesByUserId(@RequestParam Long userId){
+    public List<String> getMonthNamesByUserId(@RequestParam("userId") Long userId){
        return monthService.getMonthNamesByUserId(userId);
     }
 
@@ -51,7 +52,7 @@ public class MonthController {
 //    }
 
     @DeleteMapping("/{id}")
-    public Long deleteMonth(@PathVariable Long id){
+    public Long deleteMonth(@PathVariable("id") Long id){
         return monthService.deleteMonthById(id);
     }
 }

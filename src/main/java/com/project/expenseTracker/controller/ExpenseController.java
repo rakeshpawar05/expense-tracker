@@ -15,15 +15,15 @@ public class ExpenseController {
     private final ExpenseService expenseService;
 
     @GetMapping("/{id}")
-    public ExpenseDto getExpenseById(@PathVariable Long id){
+    public ExpenseDto getExpenseById(@PathVariable("id") Long id){
         return expenseService.getExpenseById(id);
     }
 
     @GetMapping
-    public List<ExpenseDto> getExpenses(@RequestParam Long userId,
-                                        @RequestParam(required = false) String monthName,
-                                        @RequestParam(required = false) String categoryName,
-                                        @RequestParam(required = false) String expenseName){
+    public List<ExpenseDto> getExpenses(@RequestParam("userId") Long userId,
+                                        @RequestParam(name = "monthName", required = false) String monthName,
+                                        @RequestParam(name = "categoryName", required = false) String categoryName,
+                                        @RequestParam(name = "expenseName", required = false) String expenseName){
         return expenseService.getExpenses(userId, monthName, categoryName, expenseName);
     }
 
@@ -33,17 +33,17 @@ public class ExpenseController {
     }
 
     @PutMapping("/{id}")
-    public ExpenseDto updateExpense(@RequestBody ExpenseDto expenseDto, @PathVariable Long id){
+    public ExpenseDto updateExpense(@RequestBody ExpenseDto expenseDto, @PathVariable("id") Long id){
         return expenseService.updateExpense(expenseDto, id);
     }
 
     @DeleteMapping("/{id}")
-    public long deleteExpense(@PathVariable Long id){
+    public long deleteExpense(@PathVariable("id") Long id){
         return expenseService.deleteExpenseById(id);
     }
 
     @GetMapping("/top5")
-    public List<ExpenseDto> getTop5ByMonth(@RequestParam Long userId, @RequestParam String monthName) {
+    public List<ExpenseDto> getTop5ByMonth(@RequestParam("userId") Long userId, @RequestParam("monthName") String monthName) {
         return expenseService.getTop5ByMonth(userId, monthName);
     }
 }

@@ -43,7 +43,7 @@ public class UserController {
     }
 
     @GetMapping("/users/{userId}")
-    public UserDomainDto getUserInfo(@PathVariable Long userId){
+    public UserDomainDto getUserInfo(@PathVariable("userId") Long userId){
         return  userService.getUserInfo(userId);
     }
 }

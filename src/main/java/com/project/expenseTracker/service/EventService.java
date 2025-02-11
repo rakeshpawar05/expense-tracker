@@ -24,6 +24,7 @@ public class EventService {
 
     private EventRepository EventRepository;
     private UserRepository userRepository;
+    private ExpenseRepository expenseRepository;
 
     public Long createEvent(EventDto EventDto){
         User user = userRepository.findById(EventDto.getUserId()).orElseThrow(
@@ -53,6 +54,11 @@ public class EventService {
     }
 
     public Long deleteEventById(Long id){
+        List<Expense> expenses = expenseRepository.findByEventId(id);
+        expenses.forEach(expense -> {
+            expense.setEvent(null);
+            expenseRepository.save(expense);
+        });
         EventRepository.deleteById(id);
         return id;
     }
