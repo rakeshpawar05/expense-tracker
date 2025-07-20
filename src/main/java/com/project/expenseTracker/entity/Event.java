@@ -30,4 +30,8 @@ public class Event {
     @JsonBackReference
     @OneToMany(mappedBy = "event")
     private List<Expense> expenses;
+
+    @JsonBackReference
+    @OneToMany(mappedBy = "event")
+    private List<Saving> savings;
 }

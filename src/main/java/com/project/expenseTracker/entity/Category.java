@@ -36,4 +36,8 @@ public class Category {
     @JsonBackReference
     @OneToMany(mappedBy = "category")
     private List<Expense> expenses;
+
+    @JsonBackReference
+    @OneToMany(mappedBy = "category")
+    private List<Saving> savings;
 }

@@ -81,6 +81,8 @@ public class EventService {
                 .userId(Event.getUser().getId())
                 .expenses(Event.getExpenses().stream()
                         .map(ExpenseService::mapEntityToDTo).toList())
+                .savings(Event.getSavings().stream()
+                        .map(SavingService::mapEntityToDTo).toList())
                 .build();
     }
 

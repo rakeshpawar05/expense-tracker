@@ -83,6 +83,7 @@ public class UserService implements UserDetailsService {
                 .months(user.getMonths().stream().map(MonthService::mapEntityToDto).toList())
                 .categories(user.getCategories().stream().map(CategoryService::mapEntityToDto).toList())
                 .expenses(user.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList())
+                .savings(user.getSavings().stream().map(SavingService::mapEntityToDTo).toList())
                 .build();
     }
 }

@@ -1,6 +1,7 @@
 package com.project.expenseTracker.service;
 
 import com.project.expenseTracker.dto.CategoryDto;
+import com.project.expenseTracker.dto.SavingDto;
 import com.project.expenseTracker.entity.Category;
 import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
@@ -94,6 +95,9 @@ public class CategoryService {
                 .expenses(category.getExpenses().stream()
                         .filter(expense -> expense.getMonth() == category.getMonth())
                         .map(ExpenseService::mapEntityToDTo).toList())
+                .savings(category.getSavings().stream()
+                        .filter(saving -> saving.getMonth() == category.getMonth())
+                        .map(SavingService::mapEntityToDTo).toList())
                 .build();
     }
 

@@ -24,4 +24,6 @@ public class CategoryDto {
     private String monthName;
 
     private List<ExpenseDto> expenses;
+
+    private List<SavingDto> savings;
 }

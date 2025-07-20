@@ -45,4 +45,8 @@ public class User {
     @JsonBackReference
     @OneToMany(mappedBy = "user", orphanRemoval = true)
     private List<Expense> expenses;
+
+    @JsonBackReference
+    @OneToMany(mappedBy = "user", orphanRemoval = true)
+    private List<Saving> savings;
 }

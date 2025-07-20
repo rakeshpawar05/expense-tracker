@@ -30,4 +30,6 @@ public class MonthDto {
 
     private List<ExpenseDto> expenses;
 
+    private List<SavingDto> savings;
+
 }

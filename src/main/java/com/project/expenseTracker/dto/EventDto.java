@@ -22,4 +22,6 @@ public class EventDto {
     private Long userId;
 
     private List<ExpenseDto> expenses;
+
+    private List<SavingDto> savings;
 }

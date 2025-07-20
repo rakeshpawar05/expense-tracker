@@ -112,6 +112,7 @@ public class MonthService {
                 .userId(month.getUser().getId())
                 .categories(month.getCategories().stream().map(CategoryService::mapEntityToDto).toList())
                 .expenses(month.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList())
+                .savings(month.getSavings().stream().map(SavingService::mapEntityToDTo).toList())
                 .build();
     }
 
