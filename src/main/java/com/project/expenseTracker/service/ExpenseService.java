@@ -3,6 +3,8 @@ package com.project.expenseTracker.service;
 import com.project.expenseTracker.dto.CategoryDto;
 import com.project.expenseTracker.dto.ExpenseDto;
 import com.project.expenseTracker.dto.MonthDto;
+import com.project.expenseTracker.dto.ExpenseFeedDto;
+import com.project.expenseTracker.dto.ExpenseFeedResponseDto;
 import com.project.expenseTracker.entity.*;
 import com.project.expenseTracker.exception.InvalidRequestException;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
@@ -153,5 +155,119 @@ public class ExpenseService {
 
         return month.getExpenses().stream().sorted(Comparator.comparing(Expense::getAmount).reversed()).limit(5).
     map(ExpenseService::mapEntityToDTo).toList();
+    }
+
+    /**
+     * Get expense feed for a user with optional month filter
+     * Returns expenses sorted by date (most recent first) with limit
+     * 
+     * @param userId User ID
+     * @param monthName Optional month name in format "MonthName,year"
+     * @param limit Maximum number of expenses to return (default 20)
+     * @return List of expenses sorted by date descending
+     */
+    public List<ExpenseDto> getExpenseFeed(Long userId, String monthName, Integer limit){
+        // Validate user exists
+        userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("User not found")
+        );
+
+        List<Expense> expenses;
+        if(monthName != null && !monthName.isEmpty()){
+            // Get expenses for specific month
+            Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(monthName),
+                    getMonthYear(monthName), userId).orElseThrow(
+                    () -> new ResourceNotFoundException("Month not found")
+            );
+            expenses = month.getExpenses() != null ? month.getExpenses() : new java.util.ArrayList<>();
+        } else {
+            // Get all expenses for user
+            expenses = expenseRepository.findByFilters(userId, null, null, null, null);
+        }
+
+        // Sort by date descending (most recent first) and apply limit
+        return expenses.stream()
+                .sorted(Comparator.comparing(Expense::getDate).reversed())
+                .limit(limit)
+                .map(ExpenseService::mapEntityToDTo)
+                .toList();
+    }
+
+    /**
+     * Get expense feed with cursor-based pagination for infinite scrolling
+     * 
+     * @param userId User ID (required)
+     * @param monthName Optional month name in format "MonthName,year"
+     * @param cursor Optional cursor (date string) for pagination, expenses before this date
+     * @param limit Number of items to return (default 20)
+     * @param fromDate Optional start date filter
+     * @param toDate Optional end date filter
+     * @param categoryId Optional category filter
+     * @param eventId Optional event filter
+     * @return ExpenseFeedResponseDto with items and next cursor
+     */
+    public ExpenseFeedResponseDto getExpenseFeedWithCursor(Long userId, String monthName, String cursor, 
+                                                           Integer limit, String fromDate, String toDate, 
+                                                           Long categoryId, Long eventId) {
+        // Validate user exists
+        userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("User not found")
+        );
+
+        // Set default limit
+        if (limit == null || limit <= 0) {
+            limit = 20;
+        }
+
+        // Get month ID if monthName is provided
+        Long monthId = null;
+        if (monthName != null && !monthName.isEmpty()) {
+            Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(monthName),
+                    getMonthYear(monthName), userId).orElseThrow(
+                    () -> new ResourceNotFoundException("Month not found")
+            );
+            monthId = month.getId();
+        }
+
+        // Fetch expenses with cursor pagination (limit + 1 to detect if there are more items)
+        List<Expense> expenses = expenseRepository.findFeedWithCursor(
+                userId, monthId, cursor, fromDate, toDate, categoryId, eventId
+        );
+
+        // Check if there are more items
+        boolean hasMore = expenses.size() > limit;
+        
+        // Convert to DTOs and apply limit
+        List<ExpenseFeedDto> feedItems = expenses.stream()
+                .limit(limit)
+                .map(this::mapEntityToFeedDto)
+                .toList();
+
+        // Calculate next cursor (date of last item if hasMore is true)
+        String nextCursor = null;
+        if (hasMore && !feedItems.isEmpty()) {
+            nextCursor = feedItems.get(feedItems.size() - 1).getDate();
+        }
+
+        return ExpenseFeedResponseDto.builder()
+                .items(feedItems)
+                .nextCursor(nextCursor)
+                .hasMore(hasMore)
+                .build();
+    }
+
+    /**
+     * Map Expense entity to ExpenseFeedDto
+     */
+    private ExpenseFeedDto mapEntityToFeedDto(Expense expense) {
+        return ExpenseFeedDto.builder()
+                .id(expense.getId())
+                .description(expense.getDescription())
+                .amount(expense.getAmount())
+                .date(expense.getDate())
+                .monthName(expense.getMonth().getName() + "," + expense.getMonth().getYear())
+                .categoryName(expense.getCategory() != null ? expense.getCategory().getName() : null)
+                .eventName(expense.getEvent() != null ? expense.getEvent().getName() : null)
+                .build();
     }
 }

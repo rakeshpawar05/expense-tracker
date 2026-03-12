@@ -27,6 +27,6 @@ ON savings(user_id, month_id);
 
 # Tasks
 
-- [ ] Create migration script
-- [ ] Apply indexes
-- [ ] Test query performance
+- [x] Create migration script
+- [x] Apply indexes
+- [x] Test query performance

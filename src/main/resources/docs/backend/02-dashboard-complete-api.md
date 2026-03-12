@@ -93,8 +93,8 @@ GROUP BY category_name
 
 # Tasks
 
-- [ ] Create DTO classes
-- [ ] Implement repository queries
-- [ ] Implement DashboardService
-- [ ] Implement DashboardController
-- [ ] Add API documentation
+- [x] Create DTO classes
+- [x] Implement repository queries
+- [x] Implement DashboardService
+- [x] Implement DashboardController
+- [x] Add API documentation

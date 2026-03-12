@@ -68,8 +68,8 @@ LIMIT :limit
 
 # Tasks
 
-- [ ] Create DTO classes
-- [ ] Add repository query
-- [ ] Add service method
-- [ ] Add controller endpoint
-- [ ] Add request validation
+- [x] Create DTO classes
+- [x] Add repository query
+- [x] Add service method
+- [x] Add controller endpoint
+- [x] Add request validation

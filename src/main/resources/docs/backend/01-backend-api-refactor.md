@@ -80,8 +80,8 @@ getExpenseFeed()
 
 ## Task Checklist
 
-- [ ] Create DashboardController
-- [ ] Create DashboardService
-- [ ] Implement expense feed endpoint
-- [ ] Add request parameters
-- [ ] Add DTO responses
+- [x] Create DashboardController
+- [x] Create DashboardService
+- [x] Implement expense feed endpoint
+- [x] Add request parameters
+- [x] Add DTO responses
