@@ -2,6 +2,7 @@ package com.project.expenseTracker.controller;
 
 import com.project.expenseTracker.dto.ExpenseDto;
 import com.project.expenseTracker.dto.ExpenseFeedResponseDto;
+import com.project.expenseTracker.dto.ExpenseSearchResponseDto;
 import com.project.expenseTracker.service.ExpenseService;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -21,11 +22,17 @@ public class ExpenseController {
     }
 
     @GetMapping
-    public List<ExpenseDto> getExpenses(@RequestParam("userId") Long userId,
-                                        @RequestParam(name = "monthName", required = false) String monthName,
-                                        @RequestParam(name = "categoryName", required = false) String categoryName,
-                                        @RequestParam(name = "expenseName", required = false) String expenseName){
-        return expenseService.getExpenses(userId, monthName, categoryName, expenseName);
+    public ExpenseSearchResponseDto searchExpenses(
+            @RequestParam("userId") Long userId,
+            @RequestParam(name = "monthName", required = false) String monthName,
+            @RequestParam(name = "categoryName", required = false) String categoryName,
+            @RequestParam(name = "expenseName", required = false) String expenseName,
+            @RequestParam(name = "fromDate", required = false) String fromDate,
+            @RequestParam(name = "toDate", required = false) String toDate,
+            @RequestParam(name = "limit", required = false, defaultValue = "20") Integer limit,
+            @RequestParam(name = "cursor", required = false) String cursor,
+            @RequestParam(name = "sortOrder", required = false, defaultValue = "desc") String sortOrder) {
+        return expenseService.searchExpenses(userId, monthName, categoryName, expenseName, fromDate, toDate, limit, cursor, sortOrder);
     }
 
     @PostMapping
