@@ -24,6 +24,11 @@ public class Month {
 
     private Integer year;
 
+    @Column(name = "month_num")
+    private Integer monthNum;
+    @Column(name = "year_num")
+    private Integer yearNum;
+
     @Column
     private Double earning;
 

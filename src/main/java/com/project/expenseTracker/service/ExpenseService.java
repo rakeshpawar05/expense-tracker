@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -97,7 +98,7 @@ public class ExpenseService {
         return mapEntityToDTo(expense);
     }
 
-    public List<ExpenseDto> getExpenses(Long userId, String monthName, String categoryName, String expenseName){
+    public List<ExpenseDto> getExpenses(Long userId, YearMonth yearMonth, String categoryName, String expenseName){
 //        String name = null;
 //        Integer year = null;
 //        if(monthName != null){
@@ -105,7 +106,7 @@ public class ExpenseService {
 //            year = Integer.parseInt(monthName.split(",")[1]);
 //        }
 
-        List<Expense> expenses = expenseRepository.findByFilters(userId, getMonthName(monthName), getMonthYear(monthName), categoryName, expenseName);
+        List<Expense> expenses = expenseRepository.findByFilters(userId, yearMonth.getMonthValue(), yearMonth.getYear(), categoryName, expenseName);
         return expenses.stream().map(ExpenseService::mapEntityToDTo).sorted(Comparator.comparing(ExpenseDto::getDate)).toList();
     }
 
@@ -113,7 +114,7 @@ public class ExpenseService {
      * Unified expense search endpoint with filtering, pagination, and sorting
      * 
      * @param userId User ID (required)
-     * @param monthName Optional month filter in format "MonthName,year" (e.g., "March,2026")
+     * @param yearMonth Optional month filter in format "MonthName,year" (e.g., "March,2026")
      * @param categoryName Optional category filter
      * @param expenseName Optional expense description search
      * @param fromDate Optional start date filter (yyyy-MM-dd)
@@ -123,7 +124,7 @@ public class ExpenseService {
      * @param sortOrder Sort order: "asc" or "desc" (default "desc")
      * @return ExpenseSearchResponseDto with items, nextCursor, hasMore, and totalItems
      */
-    public ExpenseSearchResponseDto searchExpenses(Long userId, String monthName, String categoryName, 
+    public ExpenseSearchResponseDto searchExpenses(Long userId, YearMonth yearMonth, String categoryName,
                                                    String expenseName, String fromDate, String toDate,
                                                    Integer limit, String cursor, String sortOrder) {
         // Validate user exists
@@ -143,9 +144,9 @@ public class ExpenseService {
 
         // Get month ID if monthName is provided
         Long monthId = null;
-        if (monthName != null && !monthName.isEmpty()) {
-            Optional<Month> monthOptional = monthRepository.findByNameAndYearAndUserId(
-                    getMonthName(monthName), getMonthYear(monthName), userId);
+        if (yearMonth != null) {
+            Optional<Month> monthOptional = monthRepository.findByMonthNumAndYearNumAndUserId(
+                    yearMonth.getMonthValue(), yearMonth.getYear(), userId);
             if (monthOptional.isPresent()) {
                 monthId = monthOptional.get().getId();
             }
@@ -238,14 +239,15 @@ public class ExpenseService {
                 .description(expense.getDescription())
                 .date(expense.getDate())
                 .monthName(expense.getMonth().getName() +","+ expense.getMonth().getYear())
+                .yearMonth(YearMonth.of(expense.getMonth().getYearNum(), expense.getMonth().getMonthNum()))
                 .categoryName(expense.getCategory() != null ? expense.getCategory().getName() : null)
                 .userId(expense.getUser().getId())
                 .build();
     }
 
-    public List<ExpenseDto> getTop5ByMonth(Long userId, String monthName){
-        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(monthName),
-                getMonthYear(monthName), userId).orElseThrow(
+    public List<ExpenseDto> getTop5ByMonth(Long userId, YearMonth yearMonth){
+        Month month = monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(),
+                 yearMonth.getYear(), userId).orElseThrow(
                 () -> new ResourceNotFoundException("Month not found"));
 
         return month.getExpenses().stream().sorted(Comparator.comparing(Expense::getAmount).reversed()).limit(5).
@@ -257,21 +259,21 @@ public class ExpenseService {
      * Returns expenses sorted by date (most recent first) with limit
      * 
      * @param userId User ID
-     * @param monthName Optional month name in format "MonthName,year"
+     * @param yearMonth Optional month name in format "MonthName,year"
      * @param limit Maximum number of expenses to return (default 20)
      * @return List of expenses sorted by date descending
      */
-    public List<ExpenseDto> getExpenseFeed(Long userId, String monthName, Integer limit){
+    public List<ExpenseDto> getExpenseFeed(Long userId, YearMonth yearMonth, Integer limit){
         // Validate user exists
         userRepository.findById(userId).orElseThrow(
                 () -> new ResourceNotFoundException("User not found")
         );
 
         List<Expense> expenses;
-        if(monthName != null && !monthName.isEmpty()){
+        if(yearMonth != null){
             // Get expenses for specific month
-            Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(monthName),
-                    getMonthYear(monthName), userId).orElseThrow(
+            Month month = monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(),
+                     yearMonth.getYear(), userId).orElseThrow(
                     () -> new ResourceNotFoundException("Month not found")
             );
             expenses = month.getExpenses() != null ? month.getExpenses() : new java.util.ArrayList<>();
@@ -292,7 +294,7 @@ public class ExpenseService {
      * Get expense feed with cursor-based pagination for infinite scrolling
      * 
      * @param userId User ID (required)
-     * @param monthName Optional month name in format "MonthName,year"
+     * @param yearMonth Optional month name in format "MonthName,year"
      * @param cursor Optional cursor (date string) for pagination, expenses before this date
      * @param limit Number of items to return (default 20)
      * @param fromDate Optional start date filter
@@ -301,7 +303,7 @@ public class ExpenseService {
      * @param eventId Optional event filter
      * @return ExpenseFeedResponseDto with items and next cursor
      */
-    public ExpenseFeedResponseDto getExpenseFeedWithCursor(Long userId, String monthName, String cursor, 
+    public ExpenseFeedResponseDto getExpenseFeedWithCursor(Long userId, YearMonth yearMonth, String cursor,
                                                            Integer limit, String fromDate, String toDate, 
                                                            Long categoryId, Long eventId) {
         // Validate user exists
@@ -316,9 +318,9 @@ public class ExpenseService {
 
         // Get month ID if monthName is provided
         Long monthId = null;
-        if (monthName != null && !monthName.isEmpty()) {
-            Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(monthName),
-                    getMonthYear(monthName), userId).orElseThrow(
+        if (yearMonth != null) {
+            Month month = monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(),
+                     yearMonth.getYear(), userId).orElseThrow(
                     () -> new ResourceNotFoundException("Month not found")
             );
             monthId = month.getId();

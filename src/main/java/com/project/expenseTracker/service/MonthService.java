@@ -20,6 +20,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+import java.time.YearMonth;
+
 @Service
 @RequiredArgsConstructor
 public class MonthService {
@@ -68,8 +70,8 @@ public class MonthService {
         return mapEntityToDto(month);
     }
 
-    public List<MonthDto> getMonths(Long userId, String monthName){
-        List<Month> months = monthRepository.findByFilters(userId, getMonthName(monthName), getMonthYear(monthName));
+    public List<MonthDto> getMonths(Long userId, YearMonth yearMonth){
+        List<Month> months = monthRepository.findByFilters(userId, yearMonth.getMonthValue(), yearMonth.getYear());
         return months.stream().map(MonthService::mapEntityToDto).toList();
     }
 
@@ -108,6 +110,7 @@ public class MonthService {
         return MonthDto.builder()
                 .id(month.getId())
                 .name(month.getName()+","+month.getYear())
+                .yearMonth(YearMonth.of(month.getYearNum(), month.getMonthNum()))
                 .earning(month.getEarning())
                 .userId(month.getUser().getId())
                 .categories(month.getCategories().stream().map(CategoryService::mapEntityToDto).toList())

@@ -5,6 +5,7 @@ import com.project.expenseTracker.service.SavingService;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @RestController
@@ -21,10 +22,10 @@ public class SavingController {
 
     @GetMapping
     public List<SavingDto> getSavings(@RequestParam("userId") Long userId,
-                                        @RequestParam(name = "monthName", required = false) String monthName,
+                                        @RequestParam(name = "yearMonth", required = false) YearMonth yearMonth,
                                         @RequestParam(name = "categoryName", required = false) String categoryName,
                                         @RequestParam(name = "savingName", required = false) String savingName){
-        return savingService.getSavings(userId, monthName, categoryName, savingName);
+        return savingService.getSavings(userId, yearMonth, categoryName, savingName);
     }
 
     @PostMapping
@@ -43,7 +44,7 @@ public class SavingController {
     }
 
     @GetMapping("/top5")
-    public List<SavingDto> getTop5ByMonth(@RequestParam("userId") Long userId, @RequestParam("monthName") String monthName) {
-        return savingService.getTop5ByMonth(userId, monthName);
+    public List<SavingDto> getTop5ByMonth(@RequestParam("userId") Long userId, @RequestParam("yearMonth") YearMonth yearMonth) {
+        return savingService.getTop5ByMonth(userId, yearMonth);
     }
 }

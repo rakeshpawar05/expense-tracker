@@ -5,6 +5,7 @@ import com.project.expenseTracker.service.CategoryService;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @RestController
@@ -21,8 +22,8 @@ public class CategoryController {
     }
 
     @GetMapping
-    public List<CategoryDto> getCategoriesByMonthName(@RequestParam("userId") Long userId, @RequestParam("monthName") String monthName){
-        return categoryService.getCategoryByMonthId(userId, monthName);
+    public List<CategoryDto> getCategoriesByMonthName(@RequestParam("userId") Long userId, @RequestParam("yearMonth") YearMonth yearMonth){
+        return categoryService.getCategoryByMonthId(userId, yearMonth);
     }
 
     @PostMapping

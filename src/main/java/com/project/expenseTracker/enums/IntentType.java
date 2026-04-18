@@ -4,5 +4,6 @@ public enum IntentType {
     TOTAL_EXPENSE,
     TOP_EXPENSES,
     CATEGORY_SUMMARY,
+    EVENT_SUMMARY,
     UNKNOWN
 }

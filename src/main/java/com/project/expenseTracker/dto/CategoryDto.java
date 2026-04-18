@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @Getter
@@ -22,6 +23,7 @@ public class CategoryDto {
     private Long userId;
 
     private String monthName;
+    private YearMonth yearMonth;
 
     private List<ExpenseDto> expenses;
 

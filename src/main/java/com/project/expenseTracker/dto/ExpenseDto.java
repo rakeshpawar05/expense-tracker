@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.time.YearMonth;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,6 +28,9 @@ public class ExpenseDto {
 
     @NotNull(message = "Month Name is required")
     private String monthName;
+
+    @NotNull(message = "YearMonth is required")
+    private YearMonth yearMonth;
 
 //    @NotNull(message = "Category Name is required")
     private String categoryName;

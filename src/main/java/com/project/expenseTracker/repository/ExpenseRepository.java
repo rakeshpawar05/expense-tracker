@@ -21,13 +21,13 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     select e from Expense e
     join Month m on m.id=e.month.id
     left join Category c on c.id=e.category.id
-    where (:monthName is null or m.name=:monthName)
-    and (:monthYear is null or m.year=:monthYear)
+    where (:monthNum is null or m.monthNum=:monthNum)
+    and (:yearNum is null or m.yearNum=:yearNum)
     and (:categoryName is null or c.name=:categoryName)
     and (:expenseName is null or e.description=:expenseName)
     and (:userId is null or e.user.id=:userId)
     """)
-    List<Expense> findByFilters(Long userId, String monthName,Integer monthYear, String categoryName, String expenseName);
+    List<Expense> findByFilters(Long userId, Integer monthNum,Integer yearNum, String categoryName, String expenseName);
 
     List<Expense> findByMonthName(String monthName);
     List<Expense> findByCategoryName(String categoryName);

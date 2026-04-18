@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @Getter
@@ -18,6 +19,8 @@ public class MonthDto {
 
     @NotBlank(message = "Month name is required")
     private String name;
+
+    private YearMonth yearMonth;
 
     @NotNull(message = "Earning is required")
     @Min(value = 0, message = "Earning must be greater than or equal to 0")

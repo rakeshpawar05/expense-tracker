@@ -5,12 +5,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.YearMonth;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class IntentResult {
     private IntentType intent;
-    private String month;
+    private String yearMonth;
     private String category;
 
 }
