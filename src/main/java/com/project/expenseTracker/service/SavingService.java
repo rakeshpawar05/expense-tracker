@@ -15,9 +15,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import static com.project.expenseTracker.service.MonthService.getMonthName;
-import static com.project.expenseTracker.service.MonthService.getMonthYear;
-
 @Service
 @AllArgsConstructor
 public class SavingService {
@@ -36,8 +33,7 @@ public class SavingService {
                 () -> new ResourceNotFoundException("User not found")
         );
 
-        Optional<Month> monthOptional = monthRepository.findByNameAndYearAndUserId(getMonthName(savingDto.getMonthName())
-                , getMonthYear(savingDto.getMonthName()), user.getId());
+        Optional<Month> monthOptional = Optional.ofNullable(monthService.getMonthByUserIdAndYearMonth(user.getId(), savingDto.getYearMonth()));
         Month month;
         if (monthOptional.isEmpty()) {
             Long monthId = monthService.createMonth(MonthDto.builder()
@@ -138,9 +134,7 @@ public class SavingService {
     }
 
     public List<SavingDto> getTop5ByMonth(Long userId, YearMonth yearMonth){
-        Month month = monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(),
-                yearMonth.getYear(), userId).orElseThrow(
-                () -> new ResourceNotFoundException("Month not found"));
+        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
         return month.getSavings().stream().sorted(Comparator.comparing(Saving::getAmount).reversed()).limit(5).
     map(SavingService::mapEntityToDTo).toList();
     }

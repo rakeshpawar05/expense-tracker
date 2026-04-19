@@ -20,9 +20,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-import static com.project.expenseTracker.service.MonthService.getMonthName;
-import static com.project.expenseTracker.service.MonthService.getMonthYear;
-
 @Service
 @AllArgsConstructor
 public class ExpenseService {
@@ -47,8 +44,7 @@ public class ExpenseService {
 
 //        String monthName = expenseDto.getMonthName().split(",")[0];
 //        int year = Integer.parseInt(expenseDto.getMonthName().split(",")[1]);
-        Optional<Month> monthOptional = monthRepository.findByNameAndYearAndUserId(getMonthName(expenseDto.getMonthName())
-                , getMonthYear(expenseDto.getMonthName()), user.getId());
+        Optional<Month> monthOptional = Optional.ofNullable(monthService.getMonthByUserIdAndYearMonth(expenseDto.getUserId(), expenseDto.getYearMonth()));
 //                .orElseThrow(
 //                () -> new ResourceNotFoundException("Month not found")
 //        );
@@ -98,7 +94,7 @@ public class ExpenseService {
         return mapEntityToDTo(expense);
     }
 
-    public List<ExpenseDto> getExpenses(Long userId, YearMonth yearMonth, String categoryName, String expenseName){
+    public List<ExpenseDto> getExpenses(Long userId, YearMonth yearMonth, String categoryName, String expenseName, String eventName){
 //        String name = null;
 //        Integer year = null;
 //        if(monthName != null){
@@ -106,7 +102,8 @@ public class ExpenseService {
 //            year = Integer.parseInt(monthName.split(",")[1]);
 //        }
 
-        List<Expense> expenses = expenseRepository.findByFilters(userId, yearMonth.getMonthValue(), yearMonth.getYear(), categoryName, expenseName);
+        List<Expense> expenses = expenseRepository.findByFilters(userId, yearMonth == null ?null :yearMonth.getMonthValue(),
+                yearMonth == null? null :yearMonth.getYear(), categoryName, expenseName, eventName);
         return expenses.stream().map(ExpenseService::mapEntityToDTo).sorted(Comparator.comparing(ExpenseDto::getDate)).toList();
     }
 
@@ -145,8 +142,7 @@ public class ExpenseService {
         // Get month ID if monthName is provided
         Long monthId = null;
         if (yearMonth != null) {
-            Optional<Month> monthOptional = monthRepository.findByMonthNumAndYearNumAndUserId(
-                    yearMonth.getMonthValue(), yearMonth.getYear(), userId);
+            Optional<Month> monthOptional = Optional.ofNullable(monthService.getMonthByUserIdAndYearMonth(userId, yearMonth));
             if (monthOptional.isPresent()) {
                 monthId = monthOptional.get().getId();
             }
@@ -246,9 +242,7 @@ public class ExpenseService {
     }
 
     public List<ExpenseDto> getTop5ByMonth(Long userId, YearMonth yearMonth){
-        Month month = monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(),
-                 yearMonth.getYear(), userId).orElseThrow(
-                () -> new ResourceNotFoundException("Month not found"));
+        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
 
         return month.getExpenses().stream().sorted(Comparator.comparing(Expense::getAmount).reversed()).limit(5).
     map(ExpenseService::mapEntityToDTo).toList();
@@ -272,14 +266,11 @@ public class ExpenseService {
         List<Expense> expenses;
         if(yearMonth != null){
             // Get expenses for specific month
-            Month month = monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(),
-                     yearMonth.getYear(), userId).orElseThrow(
-                    () -> new ResourceNotFoundException("Month not found")
-            );
+            Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
             expenses = month.getExpenses() != null ? month.getExpenses() : new java.util.ArrayList<>();
         } else {
             // Get all expenses for user
-            expenses = expenseRepository.findByFilters(userId, null, null, null, null);
+            expenses = expenseRepository.findByFilters(userId, null, null, null, null, null);
         }
 
         // Sort by date descending (most recent first) and apply limit
@@ -319,10 +310,7 @@ public class ExpenseService {
         // Get month ID if monthName is provided
         Long monthId = null;
         if (yearMonth != null) {
-            Month month = monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(),
-                     yearMonth.getYear(), userId).orElseThrow(
-                    () -> new ResourceNotFoundException("Month not found")
-            );
+            Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
             monthId = month.getId();
         }
 

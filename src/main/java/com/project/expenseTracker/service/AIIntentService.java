@@ -73,7 +73,8 @@ public class AIIntentService {
 You are an AI assistant that extracts structured data from user queries.
 
 Instructions:
-- If months is mentioned and year is not specified, assume current year.
+- If months is mentioned and year is not specified, just return month in "YYYY-MM" format (e.g. "YYYY-03"). Keep "YYYY" as is if year is not mentioned.
+- If month is not mentioned, return null for yearMonth.
 
 Return ONLY JSON.
 
@@ -82,6 +83,7 @@ Supported intents:
 - TOP_EXPENSES
 - CATEGORY_SUMMARY
 - EVENT_SUMMARY
+- UNKNOWN (if you can't determine intent)
 
 Extract:
 - intent
@@ -125,7 +127,7 @@ Response format:
             log.info("Parsed intent: {}", intentResult);
             return intentResult;
         } catch (Exception e) {
-            return new IntentResult(IntentType.UNKNOWN, null, null);
+            return new IntentResult(IntentType.UNKNOWN, null, null,null);
         }
     }
 
@@ -147,12 +149,16 @@ Response format:
         LocalDate now = LocalDate.now();
 
         if ("last_month".equalsIgnoreCase(yearMonth)) {
-            LocalDate date = now.minusMonths(1);
             return YearMonth.now().minusMonths(1).toString();
         }
 
         if ("this_month".equalsIgnoreCase(yearMonth) || "current_month".equalsIgnoreCase(yearMonth)) {
             return YearMonth.now().toString();
+        }
+
+        if(yearMonth != null && yearMonth.contains("YYYY")) {
+            String monthPart = yearMonth.replace("YYYY-", "");
+            return YearMonth.of(now.getYear(), Integer.parseInt(monthPart)).toString();
         }
 
         // fallback (if AI gives actual month later)

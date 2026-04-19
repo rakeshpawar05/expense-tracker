@@ -3,6 +3,7 @@ package com.project.expenseTracker.controller;
 import com.project.expenseTracker.dto.CategoryDto;
 import com.project.expenseTracker.service.CategoryService;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.YearMonth;
@@ -10,11 +11,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/categories")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class CategoryController {
 
-
-    private CategoryService categoryService;
+    private final CategoryService categoryService;
 
     @GetMapping("/{id}")
     public CategoryDto getCategoryById(@PathVariable("id") Long id){
@@ -22,7 +22,7 @@ public class CategoryController {
     }
 
     @GetMapping
-    public List<CategoryDto> getCategoriesByMonthName(@RequestParam("userId") Long userId, @RequestParam("yearMonth") YearMonth yearMonth){
+    public List<CategoryDto> getCategoriesByYearMonth(@RequestParam("userId") Long userId, @RequestParam("yearMonth") YearMonth yearMonth){
         return categoryService.getCategoryByMonthId(userId, yearMonth);
     }
 

@@ -14,5 +14,6 @@ public class IntentResult {
     private IntentType intent;
     private String yearMonth;
     private String category;
+    private String event;
 
 }

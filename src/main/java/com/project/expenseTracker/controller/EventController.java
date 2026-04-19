@@ -22,7 +22,7 @@ public class EventController {
 
     @GetMapping
     public List<EventDto> getEvents(@RequestParam("userId") Long userId){
-        return EventService.getEventByMonthId(userId);
+        return EventService.getEventByUserId(userId);
     }
 
     @PostMapping

@@ -16,15 +16,12 @@ import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.project.expenseTracker.service.MonthService.getMonthName;
-import static com.project.expenseTracker.service.MonthService.getMonthYear;
-
 @Service
 @AllArgsConstructor
 public class DashboardService {
 
     private final UserRepository userRepository;
-    private final MonthRepository monthRepository;
+    private final MonthService monthService;
     private final ExpenseService expenseService;
 
     /**
@@ -36,10 +33,7 @@ public class DashboardService {
                 () -> new ResourceNotFoundException("User not found")
         );
 
-        Month month = monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(),
-                yearMonth.getYear(), userId).orElseThrow(
-                () -> new ResourceNotFoundException("Month not found")
-        );
+        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
 
         // Get all expenses for the month
         List<Expense> monthExpenses = month.getExpenses() != null ? month.getExpenses() : new ArrayList<>();

@@ -19,73 +19,103 @@ public class AIService {
 
     private final AIIntentService aiIntentService;
 
+    private final AIResponseService aiResponseService;
+
     public String processQuery(AIRequest request) {
 
         IntentResult intent = aiIntentService.detect(request.getMessage());
 
+        final YearMonth yearMonth = intent.getYearMonth() != null ? YearMonth.parse(intent.getYearMonth()): null;
         return switch (intent.getIntent()) {
-            case TOTAL_EXPENSE -> getTotalExpense(request.getUserId(), YearMonth.parse(intent.getYearMonth()));
-            case TOP_EXPENSES -> getTopExpenses(request.getUserId(), YearMonth.parse(intent.getYearMonth()));
-            case CATEGORY_SUMMARY -> getCategorySummary(request.getUserId(), YearMonth.parse(intent.getYearMonth()));
-            default -> "I didn't understand that. Try asking about expenses.";
+            case TOTAL_EXPENSE -> getTotalExpense(request, yearMonth);
+            case TOP_EXPENSES -> getTopExpenses(request, yearMonth);
+            case CATEGORY_SUMMARY -> getCategorySummary(request, yearMonth, intent.getCategory());
+            case EVENT_SUMMARY -> getEventSummary(request, intent.getEvent());
+            default -> getGenericResponse(request);
         };
     }
 
-    private String getTotalExpense(Long userId, YearMonth yearMonth) {
+    private String getTotalExpense(AIRequest aiRequest, YearMonth yearMonth) {
 
         List<ExpenseDto> expenses =
-                expenseService.getExpenses(userId, yearMonth, null, null);
+                expenseService.getExpenses(aiRequest.getUserId(), yearMonth, null, null, null);
 
-        int total = expenses.stream()
-                .mapToInt(ExpenseDto::getAmount)
-                .sum();
-
-        return "You spent ₹" + total + " in " + yearMonth;
+        return aiResponseService.generateResponse(aiRequest.getMessage(), expenses);
+//        int total = expenses.stream()
+//                .mapToInt(ExpenseDto::getAmount)
+//                .sum();
+//
+//        return "You spent ₹" + total + " in " + yearMonth;
     }
 
-    private String getTopExpenses(Long userId, YearMonth yearMonth) {
+    private String getTopExpenses(AIRequest aiRequest, YearMonth yearMonth) {
 
         List<ExpenseDto> topExpenses =
-                expenseService.getTop5ByMonth(userId, yearMonth);
+                expenseService.getTop5ByMonth(aiRequest.getUserId(), yearMonth);
 
         if (topExpenses.isEmpty()) {
             return "No expenses found for " + yearMonth;
         }
 
-        StringBuilder response = new StringBuilder("Top expenses:\n");
+        return aiResponseService.generateResponse(aiRequest.getMessage(), topExpenses);
 
-        int i = 1;
-        for (ExpenseDto e : topExpenses) {
-            response.append(i++)
-                    .append(". ")
-                    .append(e.getDescription())
-                    .append(" - ₹")
-                    .append(e.getAmount())
-                    .append("\n");
-        }
-
-        return response.toString();
+//        StringBuilder response = new StringBuilder("Top expenses:\n");
+//
+//        int i = 1;
+//        for (ExpenseDto e : topExpenses) {
+//            response.append(i++)
+//                    .append(". ")
+//                    .append(e.getDescription())
+//                    .append(" - ₹")
+//                    .append(e.getAmount())
+//                    .append("\n");
+//        }
+//
+//        return response.toString();
     }
 
-    private String getCategorySummary(Long userId, YearMonth yearMonth) {
+    private String getCategorySummary(AIRequest aiRequest, YearMonth yearMonth, String categoryName) {
 
         List<ExpenseDto> expenses =
-                expenseService.getExpenses(userId, yearMonth, null, null);
+                expenseService.getExpenses(aiRequest.getUserId(), yearMonth, categoryName, null, null);
 
-        Map<String, Integer> categoryMap = new HashMap<>();
 
-        for (ExpenseDto e : expenses) {
-            String category = e.getCategoryName() != null ? e.getCategoryName() : "Other";
+        return aiResponseService.generateResponse(aiRequest.getMessage(), expenses);
+//        Map<String, Integer> categoryMap = new HashMap<>();
+//
+//        for (ExpenseDto e : expenses) {
+//            String category = e.getCategoryName() != null ? e.getCategoryName() : "Other";
+//
+//            categoryMap.put(category,
+//                    categoryMap.getOrDefault(category, 0) + e.getAmount());
+//        }
+//
+//        StringBuilder response = new StringBuilder("Category spending:\n");
+//
+//        categoryMap.forEach((cat, amt) ->
+//                response.append(cat).append(": ₹").append(amt).append("\n"));
+//
+//        return response.toString();
+    }
 
-            categoryMap.put(category,
-                    categoryMap.getOrDefault(category, 0) + e.getAmount());
+    private String getEventSummary(AIRequest aiRequest, String eventName) {
+        List<ExpenseDto> expenses =  expenseService.getExpenses(aiRequest.getUserId(), null, null, null, eventName);
+
+        if (expenses.isEmpty()) {
+            return "No expenses found for event: " + eventName;
         }
 
-        StringBuilder response = new StringBuilder("Category spending:\n");
+        return aiResponseService.generateResponse(aiRequest.getMessage(), expenses);
 
-        categoryMap.forEach((cat, amt) ->
-                response.append(cat).append(": ₹").append(amt).append("\n"));
+//        int total = expenses.stream()
+//                .mapToInt(ExpenseDto::getAmount)
+//                .sum();
+//
+//        return "You spent ₹" + total + " on " + eventName;
+    }
 
-        return response.toString();
+    private String getGenericResponse(AIRequest aiRequest) {
+
+        return aiResponseService.generateResponse(aiRequest.getMessage(), List.of());
     }
 }

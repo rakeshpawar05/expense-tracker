@@ -37,8 +37,8 @@ public class MonthService {
 
     public Long createMonth(MonthDto monthDto){
         User user = userRepository.findById(monthDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        Optional<Month> existingMonth = monthRepository.findByNameAndYearAndUserId(getMonthName(monthDto.getName()),
-                getMonthYear(monthDto.getName()), user.getId());
+        Optional<Month> existingMonth = monthRepository.findByMonthNumAndYearNumAndUserId(monthDto.getYearMonth().getMonthValue(),
+                monthDto.getYearMonth().getYear(), user.getId());
         if(existingMonth.isPresent()){
             throw new DuplicateResourceException("Month already exist");
         }
@@ -46,9 +46,6 @@ public class MonthService {
         return monthRepository.save(month).getId();
     }
 
-    public static Integer getMonthYear(String name) {
-        return name != null ? Integer.parseInt(name.split(",")[1]) : null;
-    }
 
     public static String getMonthName(String name) {
         return name != null ? name.split(",")[0] : null;
@@ -71,14 +68,10 @@ public class MonthService {
     }
 
     public List<MonthDto> getMonths(Long userId, YearMonth yearMonth){
-        List<Month> months = monthRepository.findByFilters(userId, yearMonth.getMonthValue(), yearMonth.getYear());
+        List<Month> months = monthRepository.findByFilters(userId, yearMonth != null ?yearMonth.getMonthValue(): null,
+                yearMonth!= null ?yearMonth.getYear(): null);
         return months.stream().map(MonthService::mapEntityToDto).toList();
     }
-
-//    public int getAmountForMonth(Long monthId){
-//        List<Expense> expenses = expenseRepository.findByMonthId(monthId);
-//        return expenses.stream().mapToInt(Expense::getAmount).sum();
-//    }
 
     @Transactional
     public Long deleteMonthById(Long id){
@@ -90,16 +83,20 @@ public class MonthService {
 
     private Month mapDtoToEntity(Month existingMonth, MonthDto monthDto, User user){
         String name = getMonthName(monthDto.getName());
-        int year = getMonthYear(monthDto.getName());
+        int year = monthDto.getYearMonth().getYear();
         if(existingMonth != null){
             existingMonth.setName(name);
             existingMonth.setYear(year);
+            existingMonth.setYearNum(monthDto.getYearMonth().getYear());
+            existingMonth.setMonthNum(monthDto.getYearMonth().getMonthValue());
             existingMonth.setEarning(monthDto.getEarning());
             return existingMonth;
         } else {
         return Month.builder()
                 .name(name)
                 .year(year)
+                .yearNum(monthDto.getYearMonth().getYear())
+                .monthNum(monthDto.getYearMonth().getMonthValue())
                 .earning(monthDto.getEarning())
                 .user(user)
                 .build();
@@ -121,16 +118,15 @@ public class MonthService {
 
     public List<String> getMonthNamesByUserId(Long userId) {
         List<Month> months = monthRepository.findByUserId(userId);
-        return months.stream().sorted(Comparator.comparingInt(
-                month -> java.time.Month.valueOf(month.getName().toUpperCase()).getValue()))
-                .map(month -> month.getName() + "," + month.getYear()).toList();
+        return months.stream().map(month -> YearMonth.of(month.getYearNum(), month.getMonthNum()).toString()).toList();
+//        return months.stream().sorted(Comparator.comparingInt(
+//                month -> java.time.Month.valueOf(month.getName().toUpperCase()).getValue()))
+//                .map(month -> month.getName() + "," + month.getYear()).toList();
     }
 
-//    public MonthDto getMonthByName(String name) {
-//        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(name),
-//                getMonthYear(name), u).orElseThrow(
-//                () -> new ResourceNotFoundException("Month not found"));
-//        return mapEntityToDto(month);
-//    }
+    public Month getMonthByUserIdAndYearMonth(Long userId, YearMonth yearMonth){
+        return monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(), yearMonth.getYear(), userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
+    }
 
 }
