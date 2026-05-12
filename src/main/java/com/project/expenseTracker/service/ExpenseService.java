@@ -53,6 +53,8 @@ public class ExpenseService {
             Long monthId = monthService.createMonth(MonthDto.builder()
                     .name(expenseDto.getMonthName())
                     .userId(user.getId())
+                    .yearMonth(expenseDto.getYearMonth())
+                    .earning(0.0) // Default earning
                     .build());
             month = monthRepository.findById(monthId).orElseThrow(
                     () -> new InvalidRequestException("Couldn't create new month")

@@ -39,6 +39,8 @@ public class SavingService {
             Long monthId = monthService.createMonth(MonthDto.builder()
                     .name(savingDto.getMonthName())
                     .userId(user.getId())
+                    .yearMonth(savingDto.getYearMonth())
+                    .earning(0.0) // Default earning
                     .build());
             month = monthRepository.findById(monthId).orElseThrow(
                     () -> new InvalidRequestException("Couldn't create new month")
@@ -55,6 +57,7 @@ public class SavingService {
                         .name(savingDto.getCategoryName())
                         .userId(user.getId())
                         .monthName(savingDto.getMonthName())
+                        .yearMonth(savingDto.getYearMonth())
                         .build());
                 category = categoryRepository.findById(categoryId);
             }
@@ -87,7 +90,8 @@ public class SavingService {
 //            year = Integer.parseInt(monthName.split(",")[1]);
 //        }
 
-        List<Saving> savings = savingRepository.findByFilters(userId, yearMonth.getMonthValue(), yearMonth.getYear(), categoryName, savingName);
+        List<Saving> savings = savingRepository.findByFilters(userId, yearMonth == null ? null : yearMonth.getMonthValue(),
+                yearMonth == null ? null : yearMonth.getYear(), categoryName, savingName);
         return savings.stream().map(SavingService::mapEntityToDTo).sorted(Comparator.comparing(SavingDto::getDate)).toList();
     }
 
