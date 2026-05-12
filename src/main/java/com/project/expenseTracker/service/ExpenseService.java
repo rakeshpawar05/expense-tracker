@@ -69,6 +69,7 @@ public class ExpenseService {
                         .name(expenseDto.getCategoryName())
                         .userId(user.getId())
                         .monthName(expenseDto.getMonthName())
+                        .yearMonth(expenseDto.getYearMonth())
                         .build());
                 category = categoryRepository.findById(categoryId);
             }
