@@ -12,33 +12,28 @@ import com.project.expenseTracker.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.project.expenseTracker.service.MonthService.getMonthName;
-import static com.project.expenseTracker.service.MonthService.getMonthYear;
 
 @Service
 @AllArgsConstructor
 public class DashboardService {
 
     private final UserRepository userRepository;
-    private final MonthRepository monthRepository;
+    private final MonthService monthService;
     private final ExpenseService expenseService;
 
     /**
      * Get complete dashboard data for a user in a specific month
      * Returns: month summary, total earnings, total expenses, balance, top 5 expenses, and category breakdown
      */
-    public DashboardDto getDashboardData(Long userId, String monthName) {
+    public DashboardDto getDashboardData(Long userId, YearMonth yearMonth) {
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new ResourceNotFoundException("User not found")
         );
 
-        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(monthName),
-                getMonthYear(monthName), userId).orElseThrow(
-                () -> new ResourceNotFoundException("Month not found")
-        );
+        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
 
         // Get all expenses for the month
         List<Expense> monthExpenses = month.getExpenses() != null ? month.getExpenses() : new ArrayList<>();
@@ -63,6 +58,7 @@ public class DashboardService {
         return DashboardDto.builder()
                 .monthName(month.getName())
                 .monthYear(month.getYear())
+                .yearMonth(YearMonth.of(month.getYearNum(), month.getMonthNum()))
                 .totalEarning(totalEarning)
                 .totalExpense(totalExpense)
                 .balance(balance)

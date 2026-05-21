@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -71,25 +72,33 @@ public class AIIntentService {
         return """
 You are an AI assistant that extracts structured data from user queries.
 
+Instructions:
+- If months is mentioned and year is not specified, just return month in "YYYY-MM" format (e.g. "YYYY-03"). Keep "YYYY" as is if year is not mentioned.
+- If month is not mentioned, return null for yearMonth.
+
 Return ONLY JSON.
 
 Supported intents:
 - TOTAL_EXPENSE
 - TOP_EXPENSES
 - CATEGORY_SUMMARY
+- EVENT_SUMMARY
+- UNKNOWN (if you can't determine intent)
 
 Extract:
 - intent
-- month (this_month, last_month, or actual month like January,2025 if specified)
+- yearMonth (this_month, last_month, or actual month like 2026-023 if specified)
 - category (if any)
+- event (if any)
 
 User: "%s"
 
 Response format:
 {
   "intent": "TOTAL_EXPENSE",
-  "month": "last_month",// or "January,2025"
+  "month": "last_month",// or "2026-03" if user specifies month
   "category": null
+  "event": null
 }
 """.formatted(message);
     }
@@ -114,11 +123,11 @@ Response format:
             json = cleanJson(json);
             log.info("Cleaned JSON: {}", json);
             IntentResult intentResult = mapper.readValue(json, IntentResult.class);
-            intentResult.setMonth(resolveMonth(intentResult.getMonth()));
+            intentResult.setYearMonth(resolveMonth(intentResult.getYearMonth()));
             log.info("Parsed intent: {}", intentResult);
             return intentResult;
         } catch (Exception e) {
-            return new IntentResult(IntentType.UNKNOWN, null, null);
+            return new IntentResult(IntentType.UNKNOWN, null, null,null);
         }
     }
 
@@ -135,27 +144,25 @@ Response format:
         return content;
     }
 
-    private String resolveMonth(String monthKey) {
+    private String resolveMonth(String yearMonth) {
 
         LocalDate now = LocalDate.now();
 
-        if ("last_month".equalsIgnoreCase(monthKey)) {
-            return formatMonth(now.minusMonths(1));
+        if ("last_month".equalsIgnoreCase(yearMonth)) {
+            return YearMonth.now().minusMonths(1).toString();
         }
 
-        if ("this_month".equalsIgnoreCase(monthKey) || "current_month".equalsIgnoreCase(monthKey)) {
-            return formatMonth(now);
+        if ("this_month".equalsIgnoreCase(yearMonth) || "current_month".equalsIgnoreCase(yearMonth)) {
+            return YearMonth.now().toString();
+        }
+
+        if(yearMonth != null && yearMonth.contains("YYYY")) {
+            String monthPart = yearMonth.replace("YYYY-", "");
+            return YearMonth.of(now.getYear(), Integer.parseInt(monthPart)).toString();
         }
 
         // fallback (if AI gives actual month later)
-        return monthKey;
+        return yearMonth;
     }
 
-    private String formatMonth(LocalDate date) {
-
-        String month = date.getMonth().toString().substring(0,1)
-                + date.getMonth().toString().substring(1).toLowerCase();
-
-        return month + "," + date.getYear();
-    }
 }

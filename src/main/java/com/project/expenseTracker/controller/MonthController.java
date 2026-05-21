@@ -6,6 +6,7 @@ import com.project.expenseTracker.service.MonthService;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @RestController
@@ -20,15 +21,10 @@ public class MonthController {
         return monthService.getMonthById(id);
     }
 
-//    @GetMapping("/name")
-//    public MonthDto getMonthByName(@RequestParam Long userId,@RequestParam String monthName){
-//        return monthService.getMonthByName(userId, monthName);
-//    }
-
     @GetMapping
     public List<MonthDto> getMonths(@RequestParam("userId") Long userId,
-                                    @RequestParam(name = "monthName", required = false) String monthName){
-        return monthService.getMonths(userId, monthName);
+                                    @RequestParam(name = "yearMonth", required = false)YearMonth yearMonth){
+        return monthService.getMonths(userId, yearMonth);
     }
 
     @PostMapping
@@ -45,11 +41,6 @@ public class MonthController {
     public List<String> getMonthNamesByUserId(@RequestParam("userId") Long userId){
        return monthService.getMonthNamesByUserId(userId);
     }
-
-//    @GetMapping("/{id}/amount")
-//    public int getAmountForMonth(@PathVariable Long id){
-//        return monthService.getAmountForMonth(id);
-//    }
 
     @DeleteMapping("/{id}")
     public Long deleteMonth(@PathVariable("id") Long id){

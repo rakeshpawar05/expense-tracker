@@ -10,12 +10,10 @@ import com.project.expenseTracker.repository.*;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-
-import static com.project.expenseTracker.service.MonthService.getMonthName;
-import static com.project.expenseTracker.service.MonthService.getMonthYear;
 
 @Service
 @AllArgsConstructor
@@ -31,26 +29,18 @@ public class SavingService {
 
     public long createSaving(SavingDto savingDto) {
 
-//        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-//        String currentPrincipalName = authentication.getName();
-//        System.out.println("user " + currentPrincipalName);
-
         User user = userRepository.findById(savingDto.getUserId()).orElseThrow(
                 () -> new ResourceNotFoundException("User not found")
         );
 
-//        String monthName = savingDto.getMonthName().split(",")[0];
-//        int year = Integer.parseInt(savingDto.getMonthName().split(",")[1]);
-        Optional<Month> monthOptional = monthRepository.findByNameAndYearAndUserId(getMonthName(savingDto.getMonthName())
-                , getMonthYear(savingDto.getMonthName()), user.getId());
-//                .orElseThrow(
-//                () -> new ResourceNotFoundException("Month not found")
-//        );
+        Optional<Month> monthOptional = Optional.ofNullable(monthService.getMonthByUserIdAndYearMonth(user.getId(), savingDto.getYearMonth()));
         Month month;
         if (monthOptional.isEmpty()) {
             Long monthId = monthService.createMonth(MonthDto.builder()
                     .name(savingDto.getMonthName())
                     .userId(user.getId())
+                    .yearMonth(savingDto.getYearMonth())
+                    .earning(0.0) // Default earning
                     .build());
             month = monthRepository.findById(monthId).orElseThrow(
                     () -> new InvalidRequestException("Couldn't create new month")
@@ -67,6 +57,7 @@ public class SavingService {
                         .name(savingDto.getCategoryName())
                         .userId(user.getId())
                         .monthName(savingDto.getMonthName())
+                        .yearMonth(savingDto.getYearMonth())
                         .build());
                 category = categoryRepository.findById(categoryId);
             }
@@ -81,7 +72,6 @@ public class SavingService {
     public SavingDto updateSaving(SavingDto savingDto, Long savingId){
         Saving existingSaving = savingRepository.findById(savingId).orElseThrow(
                 () -> new ResourceNotFoundException("Saving not found"));
-//        Month month = existingSaving.getMonth();
         Saving saving = savingRepository.save(mapDtoToEntity(existingSaving, savingDto, null, null, null, null));
         return mapEntityToDTo(saving);
     }
@@ -92,7 +82,7 @@ public class SavingService {
         return mapEntityToDTo(saving);
     }
 
-    public List<SavingDto> getSavings(Long userId, String monthName, String categoryName, String savingName){
+    public List<SavingDto> getSavings(Long userId, YearMonth yearMonth, String categoryName, String savingName){
 //        String name = null;
 //        Integer year = null;
 //        if(monthName != null){
@@ -100,7 +90,8 @@ public class SavingService {
 //            year = Integer.parseInt(monthName.split(",")[1]);
 //        }
 
-        List<Saving> savings = savingRepository.findByFilters(userId, getMonthName(monthName), getMonthYear(monthName), categoryName, savingName);
+        List<Saving> savings = savingRepository.findByFilters(userId, yearMonth == null ? null : yearMonth.getMonthValue(),
+                yearMonth == null ? null : yearMonth.getYear(), categoryName, savingName);
         return savings.stream().map(SavingService::mapEntityToDTo).sorted(Comparator.comparing(SavingDto::getDate)).toList();
     }
 
@@ -139,16 +130,15 @@ public class SavingService {
                 .description(saving.getDescription())
                 .date(saving.getDate())
                 .monthName(saving.getMonth().getName() +","+ saving.getMonth().getYear())
+                .yearMonth(YearMonth.of(saving.getMonth().getYearNum(), saving.getMonth().getMonthNum()))
+                .eventName(saving.getEvent() != null ? saving.getEvent().getName() : null)
                 .categoryName(saving.getCategory() != null ? saving.getCategory().getName() : null)
                 .userId(saving.getUser().getId())
                 .build();
     }
 
-    public List<SavingDto> getTop5ByMonth(Long userId, String monthName){
-        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(monthName),
-                getMonthYear(monthName), userId).orElseThrow(
-                () -> new ResourceNotFoundException("Month not found"));
-
+    public List<SavingDto> getTop5ByMonth(Long userId, YearMonth yearMonth){
+        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
         return month.getSavings().stream().sorted(Comparator.comparing(Saving::getAmount).reversed()).limit(5).
     map(SavingService::mapEntityToDTo).toList();
     }

@@ -2,6 +2,7 @@ package com.project.expenseTracker.dto;
 
 import lombok.*;
 
+import java.time.YearMonth;
 import java.util.List;
 
 @Getter
@@ -13,6 +14,7 @@ public class DashboardDto {
 
     private String monthName;
     private Integer monthYear;
+    private YearMonth yearMonth;
     private Double totalEarning;
     private Double totalExpense;
     private Double balance;

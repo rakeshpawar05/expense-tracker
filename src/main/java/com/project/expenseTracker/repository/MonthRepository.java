@@ -13,14 +13,16 @@ public interface MonthRepository extends JpaRepository<Month, Long> {
 
     Optional<Month> findByNameAndYearAndUserId(String name, Integer year, Long userId);
 
+    Optional<Month> findByMonthNumAndYearNumAndUserId(Integer monthNum, Integer yearNum, Long userId);
+
     @Query("""
     select m from Month m
     join User u on u.id=m.user.id
-    where (:name is null or m.name=:name)
-    and (:year is null or m.year=:year)
+    where (:monthNum is null or m.monthNum=:monthNum)
+    and (:yearNum is null or m.yearNum=:yearNum)
     and (:userId is null or m.user.id=:userId)
     """)
-    List<Month> findByFilters(Long userId, String name, Integer year);
+    List<Month> findByFilters(Long userId, Integer monthNum, Integer yearNum);
 
 
 }

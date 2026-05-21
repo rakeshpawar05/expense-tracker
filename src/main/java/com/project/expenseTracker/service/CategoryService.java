@@ -14,10 +14,8 @@ import com.project.expenseTracker.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.YearMonth;
 import java.util.List;
-
-import static com.project.expenseTracker.service.MonthService.getMonthName;
-import static com.project.expenseTracker.service.MonthService.getMonthYear;
 
 @Service
 @AllArgsConstructor
@@ -25,16 +23,13 @@ public class CategoryService {
 
     private CategoryRepository categoryRepository;
     private UserRepository userRepository;
-    private MonthRepository monthRepository;
+    private MonthService monthService;
     private ExpenseRepository expenseRepository;
 
     public Long createCategory(CategoryDto categoryDto){
         User user = userRepository.findById(categoryDto.getUserId()).orElseThrow(
                 () -> new ResourceNotFoundException("User not found"));
-        Month month = monthRepository.findByNameAndYearAndUserId(getMonthName(categoryDto.getMonthName()),
-                getMonthYear(categoryDto.getMonthName()), user.getId()).orElseThrow(
-                () -> new ResourceNotFoundException("Month not found"));
-
+        Month month = monthService.getMonthByUserIdAndYearMonth(categoryDto.getUserId(), categoryDto.getYearMonth());
         Category category = mapDtoToEntity(null, categoryDto, user, month);
         return categoryRepository.save(category).getId();
     }
@@ -53,9 +48,8 @@ public class CategoryService {
         return mapEntityToDto(category);
     }
 
-    public List<CategoryDto> getCategoryByMonthId(Long userId, String monthName){
-        List<Category> categories = categoryRepository.findByMonthNameAndMonthYearAndUserId(monthName.split(",")[0],
-                Integer.parseInt(monthName.split(",")[1]), userId);
+    public List<CategoryDto> getCategoryByMonthId(Long userId, YearMonth yearMonth){
+        List<Category> categories = categoryRepository.findByUserIdAndMonthYearNumAndMonthMonthNum(userId, yearMonth.getYear(), yearMonth.getMonthValue());
         return categories.stream().map(CategoryService::mapEntityToDto).toList();
     }
 
@@ -91,6 +85,7 @@ public class CategoryService {
                 .id(category.getId())
                 .name(category.getName())
                 .monthName(category.getMonth().getName() + "," + category.getMonth().getYear())
+                .yearMonth(YearMonth.of(category.getMonth().getYearNum(), category.getMonth().getMonthNum()))
                 .userId(category.getUser().getId())
                 .expenses(category.getExpenses().stream()
                         .filter(expense -> expense.getMonth() == category.getMonth())

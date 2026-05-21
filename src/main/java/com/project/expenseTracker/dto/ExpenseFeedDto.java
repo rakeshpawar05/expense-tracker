@@ -2,6 +2,8 @@ package com.project.expenseTracker.dto;
 
 import lombok.*;
 
+import java.time.YearMonth;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,6 +20,7 @@ public class ExpenseFeedDto {
     private String date;
     
     private String monthName;
+    private YearMonth yearMonth;
     
     private String categoryName;
     

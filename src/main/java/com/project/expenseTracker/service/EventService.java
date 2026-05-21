@@ -3,20 +3,15 @@ package com.project.expenseTracker.service;
 import com.project.expenseTracker.dto.EventDto;
 import com.project.expenseTracker.entity.Event;
 import com.project.expenseTracker.entity.Expense;
-import com.project.expenseTracker.entity.Month;
 import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.EventRepository;
 import com.project.expenseTracker.repository.ExpenseRepository;
-import com.project.expenseTracker.repository.MonthRepository;
 import com.project.expenseTracker.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
-import static com.project.expenseTracker.service.MonthService.getMonthName;
-import static com.project.expenseTracker.service.MonthService.getMonthYear;
 
 @Service
 @AllArgsConstructor
@@ -48,7 +43,7 @@ public class EventService {
         return mapEntityToDto(Event);
     }
 
-    public List<EventDto> getEventByMonthId(Long userId){
+    public List<EventDto> getEventByUserId(Long userId){
         List<Event> categories = EventRepository.findByUserId(userId);
         return categories.stream().map(EventService::mapEntityToDto).toList();
     }
