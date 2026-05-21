@@ -1,0 +1,3 @@
+- add lazy loading
+- add memoization
+- implement infinite scroll
