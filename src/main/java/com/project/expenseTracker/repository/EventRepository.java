@@ -11,5 +11,6 @@ import java.util.Optional;
 public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByUserId(Long userId);
 
-    Optional<Event> findByName(String name);
+    // Case-insensitive lookup for event names
+    Optional<Event> findByNameIgnoreCase(String name);
 }

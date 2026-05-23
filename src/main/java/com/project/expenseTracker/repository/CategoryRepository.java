@@ -12,7 +12,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     void deleteByMonthId(Long monthId);
 
-    Optional<Category> findByNameAndMonthIdAndUserId(String name, long monthId, long userId);
+    // Case-insensitive lookup so category names like "Food" and "food" match
+    Optional<Category> findByNameIgnoreCaseAndMonthIdAndUserId(String name, long monthId, long userId);
 
     List<Category> findByMonthNameAndMonthYearAndUserId(String monthName, int year, long userId);
 

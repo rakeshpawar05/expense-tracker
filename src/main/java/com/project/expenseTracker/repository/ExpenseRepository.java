@@ -24,7 +24,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     left join Event ev on ev.id=e.event.id
     where (:monthNum is null or m.monthNum=:monthNum)
     and (:yearNum is null or m.yearNum=:yearNum)
-    and (:categoryName is null or c.name=:categoryName)
+    and (:categoryName is null or lower(c.name)=lower(:categoryName))
     and (:expenseName is null or e.description=:expenseName)
     and(:eventName is null or ev.name=:eventName)
     and (:userId is null or e.user.id=:userId)
@@ -32,7 +32,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     List<Expense> findByFilters(Long userId, Integer monthNum,Integer yearNum, String categoryName, String expenseName, String eventName);
 
     List<Expense> findByMonthName(String monthName);
-    List<Expense> findByCategoryName(String categoryName);
+    // Case-insensitive category name lookup
+    List<Expense> findByCategoryNameIgnoreCase(String categoryName);
 
     @Query("""
     select e from Expense e
@@ -57,7 +58,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     left join Category c on c.id=e.category.id
     where e.user.id=:userId
     and (:monthId is null or e.month.id=:monthId)
-    and (:categoryName is null or c.name=:categoryName)
+    and (:categoryName is null or lower(c.name)=lower(:categoryName))
     and (:expenseName is null or lower(cast(e.description as string)) like lower(concat('%', cast(:expenseName as string), '%')))
     and (:fromDate is null or e.date >= :fromDate)
     and (:toDate is null or e.date <= :toDate)
@@ -72,7 +73,7 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     left join Category c on c.id=e.category.id
     where e.user.id=:userId
     and (:monthId is null or e.month.id=:monthId)
-    and (:categoryName is null or c.name=:categoryName)
+    and (:categoryName is null or lower(c.name)=lower(:categoryName))
     and (:expenseName is null or lower(cast(e.description as string)) like lower(concat('%', cast(:expenseName as string), '%')))
     and (:fromDate is null or e.date >= :fromDate)
     and (:toDate is null or e.date <= :toDate)

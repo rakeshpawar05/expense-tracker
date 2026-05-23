@@ -51,7 +51,8 @@ public class SavingService {
 
         Optional<Category> category = Optional.empty();
         if (!savingDto.getCategoryName().isEmpty()) {
-            category = categoryRepository.findByNameAndMonthIdAndUserId(savingDto.getCategoryName(), month.getId(), user.getId());
+            // Use case-insensitive lookup for category names
+            category = categoryRepository.findByNameIgnoreCaseAndMonthIdAndUserId(savingDto.getCategoryName(), month.getId(), user.getId());
             if(category.isEmpty()){
                 Long categoryId = categoryService.createCategory(CategoryDto.builder()
                         .name(savingDto.getCategoryName())
@@ -63,7 +64,8 @@ public class SavingService {
             }
         }
 
-        Optional<Event> event = eventRepository.findByName(savingDto.getEventName());
+        // Use case-insensitive lookup for events as well
+        Optional<Event> event = eventRepository.findByNameIgnoreCase(savingDto.getEventName());
 
         Saving saving = mapDtoToEntity(null, savingDto, month, category.orElse(null), user, event.orElse(null));
         return savingRepository.save(saving).getId();

@@ -23,12 +23,12 @@ public interface SavingRepository extends JpaRepository<Saving, Long> {
     left join Category c on c.id=e.category.id
     where (:monthNum is null or m.monthNum=:monthNum)
     and (:yearNum is null or m.yearNum=:yearNum)
-    and (:categoryName is null or c.name=:categoryName)
+    and (:categoryName is null or lower(c.name)=lower(:categoryName))
     and (:savingName is null or e.description=:savingName)
     and (:userId is null or e.user.id=:userId)
     """)
     List<Saving> findByFilters(Long userId, Integer monthNum,Integer yearNum, String categoryName, String savingName);
 
     List<Saving> findByMonthName(String monthName);
-    List<Saving> findByCategoryName(String categoryName);
+    List<Saving> findByCategoryNameIgnoreCase(String categoryName);
 }

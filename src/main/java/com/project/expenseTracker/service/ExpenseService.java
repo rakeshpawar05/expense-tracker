@@ -65,7 +65,8 @@ public class ExpenseService {
 
         Optional<Category> category = Optional.empty();
         if (!expenseDto.getCategoryName().isEmpty()) {
-            category = categoryRepository.findByNameAndMonthIdAndUserId(expenseDto.getCategoryName(), month.getId(), user.getId());
+            // Use case-insensitive lookup for category names
+            category = categoryRepository.findByNameIgnoreCaseAndMonthIdAndUserId(expenseDto.getCategoryName(), month.getId(), user.getId());
             if(category.isEmpty()){
                 Long categoryId = categoryService.createCategory(CategoryDto.builder()
                         .name(expenseDto.getCategoryName())
@@ -77,7 +78,8 @@ public class ExpenseService {
             }
         }
 
-        Optional<Event> event = eventRepository.findByName(expenseDto.getEventName());
+        // Use case-insensitive lookup for events as well
+        Optional<Event> event = eventRepository.findByNameIgnoreCase(expenseDto.getEventName());
 
         Expense expense = mapDtoToEntity(null, expenseDto, month, category.orElse(null), user, event.orElse(null));
         return expenseRepository.save(expense).getId();
