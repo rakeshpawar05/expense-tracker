@@ -33,7 +33,7 @@ public class SavingService {
                 () -> new ResourceNotFoundException("User not found")
         );
 
-        Optional<Month> monthOptional = Optional.ofNullable(monthService.getMonthByUserIdAndYearMonth(user.getId(), savingDto.getYearMonth()));
+        Optional<Month> monthOptional = monthService.getMonthByUserIdAndYearMonth(user.getId(), savingDto.getYearMonth());
         Month month;
         if (monthOptional.isEmpty()) {
             Long monthId = monthService.createMonth(MonthDto.builder()
@@ -138,7 +138,8 @@ public class SavingService {
     }
 
     public List<SavingDto> getTop5ByMonth(Long userId, YearMonth yearMonth){
-        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
+        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth)
+                .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
         return month.getSavings().stream().sorted(Comparator.comparing(Saving::getAmount).reversed()).limit(5).
     map(SavingService::mapEntityToDTo).toList();
     }

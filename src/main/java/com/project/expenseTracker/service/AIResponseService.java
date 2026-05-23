@@ -79,7 +79,7 @@ return """
         Your task is to generate a concise and informative response based on
         the user query and the provided expenses. Focus on providing insights,
         summaries, or answers that directly address the user's question about their expenses.
-        
+
         Your response should be clear, concise, and relevant to the user's query.
         Avoid unnecessary details and focus on delivering value based on the provided expenses.
         No hallucinations, only use the provided expenses to generate the response.

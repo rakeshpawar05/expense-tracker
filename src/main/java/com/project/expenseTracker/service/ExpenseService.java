@@ -44,7 +44,7 @@ public class ExpenseService {
 
 //        String monthName = expenseDto.getMonthName().split(",")[0];
 //        int year = Integer.parseInt(expenseDto.getMonthName().split(",")[1]);
-        Optional<Month> monthOptional = Optional.ofNullable(monthService.getMonthByUserIdAndYearMonth(expenseDto.getUserId(), expenseDto.getYearMonth()));
+        Optional<Month> monthOptional = monthService.getMonthByUserIdAndYearMonth(expenseDto.getUserId(), expenseDto.getYearMonth());
 //                .orElseThrow(
 //                () -> new ResourceNotFoundException("Month not found")
 //        );
@@ -142,14 +142,14 @@ public class ExpenseService {
             sortOrder = "desc";
         }
 
-        // Get month ID if monthName is provided
-        Long monthId = null;
-        if (yearMonth != null) {
-            Optional<Month> monthOptional = Optional.ofNullable(monthService.getMonthByUserIdAndYearMonth(userId, yearMonth));
-            if (monthOptional.isPresent()) {
-                monthId = monthOptional.get().getId();
-            }
-        }
+         // Get month ID if monthName is provided
+         Long monthId = null;
+         if (yearMonth != null) {
+             Optional<Month> monthOptional = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
+             if (monthOptional.isPresent()) {
+                 monthId = monthOptional.get().getId();
+             }
+         }
 
         // Fetch expenses with search criteria
         List<Expense> allExpenses = expenseRepository.findSearchWithFilters(
@@ -245,7 +245,8 @@ public class ExpenseService {
     }
 
     public List<ExpenseDto> getTop5ByMonth(Long userId, YearMonth yearMonth){
-        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
+        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth)
+                .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
 
         return month.getExpenses().stream().sorted(Comparator.comparing(Expense::getAmount).reversed()).limit(5).
     map(ExpenseService::mapEntityToDTo).toList();
@@ -260,21 +261,22 @@ public class ExpenseService {
      * @param limit Maximum number of expenses to return (default 20)
      * @return List of expenses sorted by date descending
      */
-    public List<ExpenseDto> getExpenseFeed(Long userId, YearMonth yearMonth, Integer limit){
-        // Validate user exists
-        userRepository.findById(userId).orElseThrow(
-                () -> new ResourceNotFoundException("User not found")
-        );
+     public List<ExpenseDto> getExpenseFeed(Long userId, YearMonth yearMonth, Integer limit){
+         // Validate user exists
+         userRepository.findById(userId).orElseThrow(
+                 () -> new ResourceNotFoundException("User not found")
+         );
 
-        List<Expense> expenses;
-        if(yearMonth != null){
-            // Get expenses for specific month
-            Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
-            expenses = month.getExpenses() != null ? month.getExpenses() : new java.util.ArrayList<>();
-        } else {
-            // Get all expenses for user
-            expenses = expenseRepository.findByFilters(userId, null, null, null, null, null);
-        }
+         List<Expense> expenses;
+         if(yearMonth != null){
+             // Get expenses for specific month
+             Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth)
+                     .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
+             expenses = month.getExpenses() != null ? month.getExpenses() : new java.util.ArrayList<>();
+         } else {
+             // Get all expenses for user
+             expenses = expenseRepository.findByFilters(userId, null, null, null, null, null);
+         }
 
         // Sort by date descending (most recent first) and apply limit
         return expenses.stream()
@@ -310,12 +312,13 @@ public class ExpenseService {
             limit = 20;
         }
 
-        // Get month ID if monthName is provided
-        Long monthId = null;
-        if (yearMonth != null) {
-            Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
-            monthId = month.getId();
-        }
+         // Get month ID if monthName is provided
+         Long monthId = null;
+         if (yearMonth != null) {
+             Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth)
+                     .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
+             monthId = month.getId();
+         }
 
         // Fetch expenses with cursor pagination (limit + 1 to detect if there are more items)
         List<Expense> expenses = expenseRepository.findFeedWithCursor(

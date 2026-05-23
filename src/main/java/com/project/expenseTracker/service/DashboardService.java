@@ -33,7 +33,8 @@ public class DashboardService {
                 () -> new ResourceNotFoundException("User not found")
         );
 
-        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
+        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth)
+                .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
 
         // Get all expenses for the month
         List<Expense> monthExpenses = month.getExpenses() != null ? month.getExpenses() : new ArrayList<>();

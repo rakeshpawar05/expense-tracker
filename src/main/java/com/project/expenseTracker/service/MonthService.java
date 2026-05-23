@@ -124,9 +124,8 @@ public class MonthService {
 //                .map(month -> month.getName() + "," + month.getYear()).toList();
     }
 
-    public Month getMonthByUserIdAndYearMonth(Long userId, YearMonth yearMonth){
-        return monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(), yearMonth.getYear(), userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
+    public Optional<Month> getMonthByUserIdAndYearMonth(Long userId, YearMonth yearMonth){
+        return monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(), yearMonth.getYear(), userId);
     }
 
 }
