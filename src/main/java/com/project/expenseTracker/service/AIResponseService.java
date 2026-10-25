@@ -2,6 +2,7 @@ package com.project.expenseTracker.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.expenseTracker.dto.AICategoryInsightDto;
 import com.project.expenseTracker.dto.AIInsightDto;
 import com.project.expenseTracker.dto.ExpenseDto;
 import com.project.expenseTracker.dto.ParsedExpenseDto;
@@ -534,6 +535,169 @@ public class AIResponseService {
                 .eventName(eventName)
                 .confidence(0.75)
                 .rawInput(text)
+                .build();
+    }
+
+    public AICategoryInsightDto generateCategoryInsight(
+            String categoryName,
+            YearMonth yearMonth,
+            Double currentSpent,
+            Integer transactionCount,
+            Double averagePerTx,
+            Double percentOfTotalExpenses,
+            Double percentOfIncome,
+            Double previousMonthSpent,
+            Double percentageChangeVsPrevious,
+            Double recommendedCeiling,
+            String largestDesc,
+            Double largestAmount,
+            String defaultHealthStatus
+    ) {
+        AICategoryInsightDto.AICategoryInsightDtoBuilder builder = AICategoryInsightDto.builder()
+                .categoryName(categoryName)
+                .yearMonth(yearMonth)
+                .currentSpent(currentSpent)
+                .transactionCount(transactionCount)
+                .averagePerTransaction(averagePerTx)
+                .percentOfTotalExpenses(percentOfTotalExpenses)
+                .percentOfIncome(percentOfIncome)
+                .previousMonthSpent(previousMonthSpent)
+                .percentageChangeVsPrevious(percentageChangeVsPrevious)
+                .recommendedBudgetCeiling(recommendedCeiling)
+                .largestExpenseDescription(largestDesc)
+                .largestExpenseAmount(largestAmount)
+                .healthStatus(defaultHealthStatus);
+
+        if (apiKey != null && !apiKey.isBlank()) {
+            try {
+                String systemPrompt = "You are a professional financial advisor analyzing a specific spending category. Format your response strictly as valid JSON with no markdown wrapping and keys: headline, insight, actionableTip, healthStatus (one of HEALTHY, BALANCED, ELEVATED, CRITICAL).";
+
+                String prevMonthStr = (previousMonthSpent != null && previousMonthSpent > 0)
+                        ? String.format("₹%,.0f (%+.1f%% change)", previousMonthSpent, percentageChangeVsPrevious != null ? percentageChangeVsPrevious : 0.0)
+                        : "No prior month data recorded";
+
+                String userPrompt = String.format("""
+                        Category Details:
+                        - Category: %s
+                        - Billing Cycle: %s
+                        - Current Spent: ₹%,.0f across %d transactions (average ₹%,.0f per transaction)
+                        - Share of Total Month Outflows: %.1f%%
+                        - Share of Income: %.1f%%
+                        - Previous Month Benchmark: %s
+                        - Largest Single Expense: %s (₹%,.0f)
+                        - Recommended Monthly Ceiling: ₹%,.0f
+
+                        Provide a JSON response matching:
+                        {
+                          "headline": "A punchy 5-8 word headline summarizing the category health",
+                          "insight": "A crisp 2-sentence financial assessment comparing burn rate and benchmarks.",
+                          "actionableTip": "One direct 1-sentence tip on managing or trimming this category.",
+                          "healthStatus": "%s"
+                        }
+                        """,
+                        categoryName,
+                        yearMonth,
+                        currentSpent,
+                        transactionCount,
+                        averagePerTx,
+                        percentOfTotalExpenses,
+                        percentOfIncome,
+                        prevMonthStr,
+                        largestDesc != null ? largestDesc : "None",
+                        largestAmount != null ? largestAmount : 0.0,
+                        recommendedCeiling,
+                        defaultHealthStatus
+                );
+
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("model", modelName);
+                requestBody.put("messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", userPrompt)
+                ));
+                requestBody.put("temperature", 0.2);
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.setBearerAuth(apiKey);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+                ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
+                String content = extractContent(response);
+
+                String cleanedJson = cleanJsonContent(content);
+                JsonNode root = objectMapper.readTree(cleanedJson);
+
+                if (root.has("headline") && !root.get("headline").asText().isBlank()) {
+                    builder.headline(root.get("headline").asText());
+                }
+                if (root.has("insight") && !root.get("insight").asText().isBlank()) {
+                    builder.insight(root.get("insight").asText());
+                }
+                if (root.has("actionableTip") && !root.get("actionableTip").asText().isBlank()) {
+                    builder.actionableTip(root.get("actionableTip").asText());
+                }
+                if (root.has("healthStatus") && !root.get("healthStatus").asText().isBlank()) {
+                    builder.healthStatus(root.get("healthStatus").asText());
+                }
+
+                AICategoryInsightDto result = builder.build();
+                if (result.getHeadline() != null && result.getInsight() != null) {
+                    return result;
+                }
+            } catch (Exception e) {
+                log.warn("Groq category insight call failed ({}). Using deterministic fallback.", e.getMessage());
+            }
+        }
+
+        return generateDeterministicCategoryInsight(builder, categoryName, yearMonth, currentSpent,
+                transactionCount, averagePerTx, percentOfTotalExpenses, previousMonthSpent,
+                percentageChangeVsPrevious, recommendedCeiling, largestDesc, largestAmount);
+    }
+
+    private AICategoryInsightDto generateDeterministicCategoryInsight(
+            AICategoryInsightDto.AICategoryInsightDtoBuilder builder,
+            String categoryName,
+            YearMonth yearMonth,
+            Double currentSpent,
+            Integer transactionCount,
+            Double averagePerTx,
+            Double percentOfTotalExpenses,
+            Double previousMonthSpent,
+            Double percentageChangeVsPrevious,
+            Double recommendedCeiling,
+            String largestDesc,
+            Double largestAmount
+    ) {
+        String headline;
+        String insight;
+        String actionableTip;
+
+        if (currentSpent <= 0) {
+            headline = String.format("Zero Outflows in %s", categoryName);
+            insight = String.format("You have not recorded any expenditures under %s for %s.", categoryName, yearMonth);
+            actionableTip = "Keep tracking expenses as they occur.";
+        } else if (percentageChangeVsPrevious != null && percentageChangeVsPrevious > 30) {
+            headline = String.format("%s Outflows Rose by %.0f%%", categoryName, percentageChangeVsPrevious);
+            insight = String.format("Spending in %s reached ₹%,.0f across %d transactions (%.1f%% of all outflows), up from ₹%,.0f last cycle. Largest expense was '%s' (₹%,.0f).",
+                    categoryName, currentSpent, transactionCount, percentOfTotalExpenses, previousMonthSpent, largestDesc, largestAmount);
+            actionableTip = String.format("Target a ceiling of ₹%,.0f to stabilize your budget.", recommendedCeiling);
+        } else if (percentOfTotalExpenses > 35) {
+            headline = String.format("%s Dominates %.0f%% of Budget", categoryName, percentOfTotalExpenses);
+            insight = String.format("You spent ₹%,.0f in %s across %d transactions, averaging ₹%,.0f per item. This represents a heavy portion of your monthly expenses.",
+                    currentSpent, categoryName, transactionCount, averagePerTx);
+            actionableTip = "Review recurring charges or discretionary items in this category.";
+        } else {
+            headline = String.format("%s Spending is Stable and Balanced", categoryName);
+            insight = String.format("You spent ₹%,.0f in %s across %d transaction(s), accounting for %.1f%% of your total expenses. Spending is well within recommended boundaries.",
+                    currentSpent, categoryName, transactionCount, percentOfTotalExpenses);
+            actionableTip = String.format("Maintaining a cap near ₹%,.0f keeps this category predictable.", recommendedCeiling);
+        }
+
+        return builder
+                .headline(headline)
+                .insight(insight)
+                .actionableTip(actionableTip)
                 .build();
     }
 }

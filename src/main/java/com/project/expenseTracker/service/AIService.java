@@ -1,5 +1,6 @@
 package com.project.expenseTracker.service;
 
+import com.project.expenseTracker.dto.AICategoryInsightDto;
 import com.project.expenseTracker.dto.AIInsightDto;
 import com.project.expenseTracker.dto.AIParseExpenseRequest;
 import com.project.expenseTracker.dto.AIRequest;
@@ -10,6 +11,7 @@ import com.project.expenseTracker.entity.Category;
 import com.project.expenseTracker.entity.Event;
 import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
+import com.project.expenseTracker.repository.CategoryRepository;
 import com.project.expenseTracker.repository.EventRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class AIService {
 
     private final ExpenseService expenseService;
     private final MonthService monthService;
+    private final CategoryRepository categoryRepository;
     private final EventRepository eventRepository;
     private final AIIntentService aiIntentService;
     private final AIResponseService aiResponseService;
@@ -65,6 +68,119 @@ public class AIService {
                 effectiveDate,
                 availableCategories,
                 availableEvents
+        );
+    }
+
+    public AICategoryInsightDto getCategoryInsight(Long userId, Long categoryId, String categoryName, YearMonth requestedYm) {
+        LocalDate today = LocalDate.now();
+        YearMonth targetYm = requestedYm != null ? requestedYm : YearMonth.from(today);
+
+        Category targetCat = null;
+        if (categoryId != null) {
+            targetCat = categoryRepository.findById(categoryId).orElse(null);
+        }
+
+        if (targetCat == null && categoryName != null && !categoryName.isBlank()) {
+            List<Category> userCats = categoryRepository.findByUserIdAndMonthYearNumAndMonthMonthNum(
+                    userId, targetYm.getYear(), targetYm.getMonthValue());
+            targetCat = userCats.stream()
+                    .filter(c -> c.getName().equalsIgnoreCase(categoryName.trim()))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        final Category resolvedCat = targetCat;
+        final String finalCatName = resolvedCat != null ? resolvedCat.getName() : (categoryName != null ? categoryName : "General");
+
+        List<Expense> catExpenses = Collections.emptyList();
+        Month currentMonth = null;
+        if (resolvedCat != null) {
+            currentMonth = resolvedCat.getMonth();
+            final Month catMonth = resolvedCat.getMonth();
+            catExpenses = resolvedCat.getExpenses() != null
+                    ? resolvedCat.getExpenses().stream()
+                            .filter(e -> e.getMonth() == catMonth)
+                            .toList()
+                    : Collections.emptyList();
+        } else {
+            Optional<Month> mOpt = monthService.getMonthByUserIdAndYearMonth(userId, targetYm);
+            if (mOpt.isPresent()) {
+                currentMonth = mOpt.get();
+                catExpenses = currentMonth.getExpenses() != null
+                        ? currentMonth.getExpenses().stream()
+                                .filter(e -> e.getCategory() != null && e.getCategory().getName().equalsIgnoreCase(finalCatName))
+                                .toList()
+                        : Collections.emptyList();
+            }
+        }
+
+        Double currentSpent = catExpenses.stream().mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0).sum();
+        int count = catExpenses.size();
+        Double avgPerTx = count > 0 ? currentSpent / count : 0.0;
+
+        Expense largest = catExpenses.stream()
+                .max((a, b) -> Integer.compare(a.getAmount() != null ? a.getAmount() : 0, b.getAmount() != null ? b.getAmount() : 0))
+                .orElse(null);
+        String largestDesc = largest != null ? largest.getDescription() : "None";
+        Double largestAmount = largest != null && largest.getAmount() != null ? largest.getAmount().doubleValue() : 0.0;
+
+        Double monthIncome = currentMonth != null && currentMonth.getEarning() != null ? currentMonth.getEarning() : 0.0;
+        Double totalMonthExpenses = currentMonth != null && currentMonth.getExpenses() != null
+                ? currentMonth.getExpenses().stream().mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0).sum()
+                : currentSpent;
+
+        Double percentOfExpenses = totalMonthExpenses > 0 ? (currentSpent / totalMonthExpenses) * 100.0 : 0.0;
+        Double percentOfIncome = monthIncome > 0 ? (currentSpent / monthIncome) * 100.0 : 0.0;
+
+        // Previous month comparison
+        YearMonth prevYm = targetYm.minusMonths(1);
+        List<Category> prevCats = categoryRepository.findByUserIdAndMonthYearNumAndMonthMonthNum(
+                userId, prevYm.getYear(), prevYm.getMonthValue());
+        final Category prevCat = prevCats.stream()
+                .filter(c -> c.getName().equalsIgnoreCase(finalCatName))
+                .findFirst()
+                .orElse(null);
+
+        Double prevSpent = 0.0;
+        Double pctChange = null;
+        if (prevCat != null && prevCat.getExpenses() != null) {
+            final Month prevMonth = prevCat.getMonth();
+            prevSpent = prevCat.getExpenses().stream()
+                    .filter(e -> e.getMonth() == prevMonth)
+                    .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                    .sum();
+            if (prevSpent > 0) {
+                pctChange = ((currentSpent - prevSpent) / prevSpent) * 100.0;
+            }
+        }
+
+        // Recommended budget ceiling
+        Double recommendedCeiling;
+        if (monthIncome > 0) {
+            boolean isDiscretionary = finalCatName.toLowerCase().matches(".*(entertainment|movie|dining|restaurant|shopping|vacation|travel|hobby).*");
+            recommendedCeiling = isDiscretionary
+                    ? (double) Math.round(monthIncome * 0.15)
+                    : (double) Math.round(monthIncome * 0.25);
+        } else {
+            recommendedCeiling = currentSpent > 0 ? (double) Math.round(currentSpent * 1.1) : 5000.0;
+        }
+
+        // Health status default
+        String defaultHealth;
+        if (percentOfExpenses > 40 || (pctChange != null && pctChange > 50)) {
+            defaultHealth = "ELEVATED";
+        } else if (percentOfExpenses > 55) {
+            defaultHealth = "CRITICAL";
+        } else if (percentOfExpenses < 15) {
+            defaultHealth = "HEALTHY";
+        } else {
+            defaultHealth = "BALANCED";
+        }
+
+        return aiResponseService.generateCategoryInsight(
+                finalCatName, targetYm, currentSpent, count, avgPerTx,
+                percentOfExpenses, percentOfIncome, prevSpent, pctChange,
+                recommendedCeiling, largestDesc, largestAmount, defaultHealth
         );
     }
 
