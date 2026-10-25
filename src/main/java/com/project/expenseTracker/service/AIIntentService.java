@@ -30,7 +30,7 @@ public class AIIntentService {
     @Value("${groq.api.url}")
     private String apiUrl;
 
-    @Value("${groq.api.model:llama-3.1-8b-instant}")
+    @Value("${groq.api.model:openai/gpt-oss-20b}")
     private String modelName;
 
     private final RestTemplate restTemplate = new RestTemplate();
