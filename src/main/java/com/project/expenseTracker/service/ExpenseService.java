@@ -13,6 +13,7 @@ import com.project.expenseTracker.repository.*;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Collections;
 import java.util.Comparator;
@@ -73,6 +74,13 @@ public class ExpenseService {
         Optional<Event> event = Optional.empty();
         if (expenseDto.getEventName() != null && !expenseDto.getEventName().isEmpty()) {
             event = eventRepository.findByNameIgnoreCase(expenseDto.getEventName());
+            if (event.isEmpty()) {
+                Event newEvent = eventRepository.save(Event.builder()
+                        .name(expenseDto.getEventName())
+                        .user(user)
+                        .build());
+                event = Optional.of(newEvent);
+            }
         }
 
         Expense expense = mapDtoToEntity(null, expenseDto, month, category.orElse(null), user, event.orElse(null));
@@ -82,7 +90,75 @@ public class ExpenseService {
     public ExpenseDto updateExpense(ExpenseDto expenseDto, Long expenseId){
         Expense existingExpense = expenseRepository.findById(expenseId).orElseThrow(
                 () -> new ResourceNotFoundException("Expense not found"));
-        Expense expense = expenseRepository.save(mapDtoToEntity(existingExpense, expenseDto, null, null, null, null));
+
+        if (expenseDto.getDescription() != null) {
+            existingExpense.setDescription(expenseDto.getDescription());
+        }
+        if (expenseDto.getAmount() != null) {
+            existingExpense.setAmount(expenseDto.getAmount());
+        }
+        if (expenseDto.getDate() != null && !expenseDto.getDate().isBlank()) {
+            existingExpense.setDate(expenseDto.getDate());
+            try {
+                LocalDate parsedDate = LocalDate.parse(expenseDto.getDate());
+                YearMonth newYm = YearMonth.from(parsedDate);
+                Month currentMonth = existingExpense.getMonth();
+                if (currentMonth == null || currentMonth.getYearNum() == null || currentMonth.getMonthNum() == null
+                        || currentMonth.getYearNum() != newYm.getYear() || currentMonth.getMonthNum() != newYm.getMonthValue()) {
+                    Optional<Month> monthOptional = monthService.getMonthByUserIdAndYearMonth(existingExpense.getUser().getId(), newYm);
+                    Month targetMonth = monthOptional.orElseGet(() -> {
+                        String monthName = newYm.getMonth().name().substring(0, 1).toUpperCase() +
+                                newYm.getMonth().name().substring(1).toLowerCase() + "," + newYm.getYear();
+                        Long mId = monthService.createMonth(MonthDto.builder()
+                                .name(monthName)
+                                .userId(existingExpense.getUser().getId())
+                                .yearMonth(newYm)
+                                .earning(0.0)
+                                .build());
+                        return monthRepository.findById(mId).orElse(currentMonth);
+                    });
+                    existingExpense.setMonth(targetMonth);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // Update category if provided
+        if (expenseDto.getCategoryName() != null && !expenseDto.getCategoryName().isBlank()) {
+            Month month = existingExpense.getMonth();
+            Long userId = existingExpense.getUser().getId();
+            Optional<Category> category = categoryRepository.findByNameIgnoreCaseAndMonthIdAndUserId(
+                    expenseDto.getCategoryName(), month.getId(), userId);
+            if (category.isEmpty()) {
+                Long categoryId = categoryService.createCategory(CategoryDto.builder()
+                        .name(expenseDto.getCategoryName())
+                        .userId(userId)
+                        .monthName(month.getName() + "," + month.getYear())
+                        .yearMonth(month.getYearNum() != null && month.getMonthNum() != null
+                                ? YearMonth.of(month.getYearNum(), month.getMonthNum())
+                                : null)
+                        .build());
+                category = categoryRepository.findById(categoryId);
+            }
+            existingExpense.setCategory(category.orElse(null));
+        }
+
+        // Update event
+        if (expenseDto.getEventName() != null && !expenseDto.getEventName().isBlank()) {
+            Optional<Event> event = eventRepository.findByNameIgnoreCase(expenseDto.getEventName());
+            if (event.isEmpty()) {
+                Event newEvent = eventRepository.save(Event.builder()
+                        .name(expenseDto.getEventName())
+                        .user(existingExpense.getUser())
+                        .build());
+                event = Optional.of(newEvent);
+            }
+            existingExpense.setEvent(event.orElse(null));
+        } else if (expenseDto.getEventName() != null && expenseDto.getEventName().isBlank()) {
+            existingExpense.setEvent(null);
+        }
+
+        Expense expense = expenseRepository.save(existingExpense);
         return mapEntityToDTo(expense);
     }
 
