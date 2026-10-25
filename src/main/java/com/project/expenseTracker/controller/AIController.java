@@ -1,6 +1,7 @@
 package com.project.expenseTracker.controller;
 
 import com.project.expenseTracker.dto.AICategoryInsightDto;
+import com.project.expenseTracker.dto.AIEventInsightDto;
 import com.project.expenseTracker.dto.AIInsightDto;
 import com.project.expenseTracker.dto.AIParseExpenseRequest;
 import com.project.expenseTracker.dto.AIRequest;
@@ -46,6 +47,15 @@ public class AIController {
             @RequestParam(name = "categoryName", required = false) String categoryName,
             @RequestParam(name = "yearMonth", required = false) YearMonth yearMonth) {
         AICategoryInsightDto insight = aiService.getCategoryInsight(userId, categoryId, categoryName, yearMonth);
+        return ResponseEntity.ok(insight);
+    }
+
+    @GetMapping("/event-insight")
+    public ResponseEntity<AIEventInsightDto> getEventInsight(
+            @RequestParam("userId") Long userId,
+            @RequestParam(name = "eventId", required = false) Long eventId,
+            @RequestParam(name = "eventName", required = false) String eventName) {
+        AIEventInsightDto insight = aiService.getEventInsight(userId, eventId, eventName);
         return ResponseEntity.ok(insight);
     }
 }

@@ -1,6 +1,7 @@
 package com.project.expenseTracker.service;
 
 import com.project.expenseTracker.dto.AICategoryInsightDto;
+import com.project.expenseTracker.dto.AIEventInsightDto;
 import com.project.expenseTracker.dto.AIInsightDto;
 import com.project.expenseTracker.dto.AIParseExpenseRequest;
 import com.project.expenseTracker.dto.AIRequest;
@@ -181,6 +182,106 @@ public class AIService {
                 finalCatName, targetYm, currentSpent, count, avgPerTx,
                 percentOfExpenses, percentOfIncome, prevSpent, pctChange,
                 recommendedCeiling, largestDesc, largestAmount, defaultHealth
+        );
+    }
+
+    public AIEventInsightDto getEventInsight(Long userId, Long eventId, String eventName) {
+        Event targetEvent = null;
+        if (eventId != null) {
+            targetEvent = eventRepository.findById(eventId).orElse(null);
+        }
+
+        if (targetEvent == null && eventName != null && !eventName.isBlank()) {
+            List<Event> userEvents = eventRepository.findByUserId(userId);
+            if (userEvents != null) {
+                targetEvent = userEvents.stream()
+                        .filter(ev -> ev.getName().equalsIgnoreCase(eventName.trim()))
+                        .findFirst()
+                        .orElse(null);
+            }
+        }
+
+        final Event event = targetEvent;
+        String finalEventName = event != null ? event.getName() : (eventName != null ? eventName : "Event");
+
+        List<Expense> expenses = (event != null && event.getExpenses() != null)
+                ? event.getExpenses()
+                : Collections.emptyList();
+
+        Double totalSpent = expenses.stream()
+                .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                .sum();
+        int count = expenses.size();
+
+        // Calculate active days & timespan
+        List<String> dates = expenses.stream()
+                .map(Expense::getDate)
+                .filter(d -> d != null && !d.isBlank())
+                .sorted()
+                .toList();
+
+        String startDate = dates.isEmpty() ? null : dates.get(0);
+        String endDate = dates.isEmpty() ? null : dates.get(dates.size() - 1);
+        int activeDays = 1;
+        if (startDate != null && endDate != null) {
+            try {
+                LocalDate start = LocalDate.parse(startDate);
+                LocalDate end = LocalDate.parse(endDate);
+                long days = java.time.temporal.ChronoUnit.DAYS.between(start, end) + 1;
+                activeDays = (int) Math.max(1, days);
+            } catch (Exception ignored) {
+            }
+        }
+
+        Double dailyBurnRate = activeDays > 0 ? (double) Math.round(totalSpent / activeDays) : totalSpent;
+
+        // Largest expense
+        Expense largest = expenses.stream()
+                .max((a, b) -> Integer.compare(a.getAmount() != null ? a.getAmount() : 0, b.getAmount() != null ? b.getAmount() : 0))
+                .orElse(null);
+        String largestDesc = largest != null ? largest.getDescription() : "None";
+        Double largestAmount = largest != null && largest.getAmount() != null ? largest.getAmount().doubleValue() : 0.0;
+
+        // Category breakdown
+        Map<String, Double> categoryBreakdown = new HashMap<>();
+        for (Expense e : expenses) {
+            String catName = e.getCategory() != null ? e.getCategory().getName() : "General";
+            categoryBreakdown.put(catName, categoryBreakdown.getOrDefault(catName, 0.0) + (e.getAmount() != null ? e.getAmount() : 0.0));
+        }
+
+        Map.Entry<String, Double> topCat = categoryBreakdown.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .orElse(null);
+        String topCategory = topCat != null ? topCat.getKey() : "General";
+        Double topCategoryAmount = topCat != null ? topCat.getValue() : 0.0;
+
+        // Default verdict tag
+        String defaultVerdict;
+        if (dailyBurnRate > 10000) {
+            defaultVerdict = "Premium Outflow";
+        } else if (dailyBurnRate > 4000) {
+            defaultVerdict = "Moderate Pacing";
+        } else if (topCategory.toLowerCase().contains("travel") || topCategory.toLowerCase().contains("flight")) {
+            defaultVerdict = "Travel Heavy";
+        } else {
+            defaultVerdict = "Budget Friendly";
+        }
+
+        return aiResponseService.generateEventInsight(
+                event != null ? event.getId() : eventId,
+                finalEventName,
+                totalSpent,
+                count,
+                activeDays,
+                dailyBurnRate,
+                startDate,
+                endDate,
+                largestDesc,
+                largestAmount,
+                topCategory,
+                topCategoryAmount,
+                categoryBreakdown,
+                defaultVerdict
         );
     }
 

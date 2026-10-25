@@ -3,6 +3,7 @@ package com.project.expenseTracker.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.expenseTracker.dto.AICategoryInsightDto;
+import com.project.expenseTracker.dto.AIEventInsightDto;
 import com.project.expenseTracker.dto.AIInsightDto;
 import com.project.expenseTracker.dto.ExpenseDto;
 import com.project.expenseTracker.dto.ParsedExpenseDto;
@@ -698,6 +699,161 @@ public class AIResponseService {
                 .headline(headline)
                 .insight(insight)
                 .actionableTip(actionableTip)
+                .build();
+    }
+
+    public AIEventInsightDto generateEventInsight(
+            Long eventId,
+            String eventName,
+            Double totalSpent,
+            int transactionCount,
+            int activeDays,
+            Double dailyBurnRate,
+            String startDate,
+            String endDate,
+            String largestDesc,
+            Double largestAmount,
+            String topCategory,
+            Double topCategoryAmount,
+            Map<String, Double> categoryBreakdown,
+            String defaultVerdict
+    ) {
+        AIEventInsightDto.AIEventInsightDtoBuilder builder = AIEventInsightDto.builder()
+                .eventId(eventId)
+                .eventName(eventName)
+                .totalSpent(totalSpent)
+                .transactionCount(transactionCount)
+                .activeDays(activeDays)
+                .dailyBurnRate(dailyBurnRate)
+                .startDate(startDate)
+                .endDate(endDate)
+                .largestExpenseDescription(largestDesc)
+                .largestExpenseAmount(largestAmount)
+                .topCategory(topCategory)
+                .topCategoryAmount(topCategoryAmount)
+                .categoryBreakdown(categoryBreakdown)
+                .verdictTag(defaultVerdict);
+
+        if (apiKey != null && !apiKey.isBlank()) {
+            try {
+                String systemPrompt = "You are an elite financial consultant evaluating event, trip, or milestone expenditures. Format your response strictly as valid JSON with no markdown wrapping and keys: headline, insight, takeaway, verdictTag.";
+
+                String userPrompt = String.format("""
+                        Event Expenditure Data:
+                        - Event Name: %s
+                        - Total Outflow: ₹%,.0f
+                        - Transaction Count: %d
+                        - Timespan: %d day(s) (%s to %s)
+                        - Daily Burn Rate: ₹%,.0f/day
+                        - Largest Single Outflow: %s (₹%,.0f)
+                        - Top Category: %s (₹%,.0f)
+                        - Category Breakdown: %s
+
+                        Produce a JSON response matching:
+                        {
+                          "headline": "A punchy 5-8 word headline summarizing event costs",
+                          "insight": "A crisp, professional 2-sentence financial debrief citing daily burn and category allocation with ₹ figures.",
+                          "takeaway": "One actionable 1-sentence takeaway or budgeting observation for this milestone.",
+                          "verdictTag": "%s"
+                        }
+                        """,
+                        eventName,
+                        totalSpent,
+                        transactionCount,
+                        activeDays,
+                        startDate != null ? startDate : "N/A",
+                        endDate != null ? endDate : "N/A",
+                        dailyBurnRate,
+                        largestDesc != null ? largestDesc : "None",
+                        largestAmount != null ? largestAmount : 0.0,
+                        topCategory,
+                        topCategoryAmount,
+                        categoryBreakdown != null ? categoryBreakdown.toString() : "{}",
+                        defaultVerdict
+                );
+
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("model", modelName);
+                requestBody.put("messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", userPrompt)
+                ));
+                requestBody.put("temperature", 0.2);
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.setBearerAuth(apiKey);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+                ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
+                String content = extractContent(response);
+
+                String cleanedJson = cleanJsonContent(content);
+                JsonNode root = objectMapper.readTree(cleanedJson);
+
+                if (root.has("headline") && !root.get("headline").asText().isBlank()) {
+                    builder.headline(root.get("headline").asText());
+                }
+                if (root.has("insight") && !root.get("insight").asText().isBlank()) {
+                    builder.insight(root.get("insight").asText());
+                }
+                if (root.has("takeaway") && !root.get("takeaway").asText().isBlank()) {
+                    builder.takeaway(root.get("takeaway").asText());
+                }
+                if (root.has("verdictTag") && !root.get("verdictTag").asText().isBlank()) {
+                    builder.verdictTag(root.get("verdictTag").asText());
+                }
+
+                AIEventInsightDto result = builder.build();
+                if (result.getHeadline() != null && result.getInsight() != null) {
+                    return result;
+                }
+            } catch (Exception e) {
+                log.warn("Groq event insight call failed ({}). Using deterministic fallback.", e.getMessage());
+            }
+        }
+
+        return generateDeterministicEventInsight(builder, eventName, totalSpent, transactionCount,
+                activeDays, dailyBurnRate, startDate, endDate, largestDesc, largestAmount, topCategory);
+    }
+
+    private AIEventInsightDto generateDeterministicEventInsight(
+            AIEventInsightDto.AIEventInsightDtoBuilder builder,
+            String eventName,
+            Double totalSpent,
+            int transactionCount,
+            int activeDays,
+            Double dailyBurnRate,
+            String startDate,
+            String endDate,
+            String largestDesc,
+            Double largestAmount,
+            String topCategory
+    ) {
+        String headline;
+        String insight;
+        String takeaway;
+
+        if (totalSpent <= 0) {
+            headline = String.format("No Expenses Tagged for %s", eventName);
+            insight = String.format("You haven't recorded any transactions under %s yet.", eventName);
+            takeaway = "Tag expenses to track total costs and burn rate.";
+        } else if (dailyBurnRate > 10000) {
+            headline = String.format("%s: High Burn Velocity", eventName);
+            insight = String.format("You spent ₹%,.0f across %d day(s) for %s (averaging ₹%,.0f/day). Top expenditure was '%s' (₹%,.0f) with %s as your primary category.",
+                    totalSpent, activeDays, eventName, dailyBurnRate, largestDesc, largestAmount, topCategory);
+            takeaway = String.format("Averaging ₹%,.0f/day reflects peak milestone spending. Consider setting a pre-allocated budget cap next time.", dailyBurnRate);
+        } else {
+            headline = String.format("%s: Steady & Controlled Outflows", eventName);
+            insight = String.format("Across %d transaction(s) over %d day(s), %s accrued ₹%,.0f (averaging ₹%,.0f/day). Leading outflow was '%s' (₹%,.0f).",
+                    transactionCount, activeDays, eventName, totalSpent, dailyBurnRate, largestDesc, largestAmount);
+            takeaway = String.format("Pacing remained stable throughout %s with %s being the key driver.", eventName, topCategory);
+        }
+
+        return builder
+                .headline(headline)
+                .insight(insight)
+                .takeaway(takeaway)
                 .build();
     }
 }
