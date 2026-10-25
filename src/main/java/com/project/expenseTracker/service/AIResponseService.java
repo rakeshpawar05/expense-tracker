@@ -25,43 +25,69 @@ public class AIResponseService {
     @Value("${groq.api.url}")
     private String apiUrl;
 
+    @Value("${groq.api.model:llama-3.1-8b-instant}")
+    private String modelName;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     public String generateResponse(String userQuery, List<ExpenseDto> expenses) {
-        // Placeholder for AI response generation logic
         log.info("Generating AI response for query: {}", userQuery);
 
-        String prompt = buildPrompt(userQuery, expenses);
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("Groq API key is missing. Generating structured local response.");
+            return generateLocalFallback(userQuery, expenses);
+        }
 
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "llama-3.3-70b-versatile");
+        try {
+            String prompt = buildPrompt(userQuery, expenses);
 
-        List<Map<String, String>> messages = new ArrayList<>();
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", modelName);
 
-        messages.add(Map.of(
-                "role", "system",
-                "content", "You are an intelligent, helpful financial assistant for personal expense tracking. Provide clear, concise, and helpful natural language responses based on the provided user financial data. Format amounts in Indian Rupees (₹) when referencing expenses."
-        ));
+            List<Map<String, String>> messages = new ArrayList<>();
+            messages.add(Map.of(
+                    "role", "system",
+                    "content", "You are an intelligent, helpful financial assistant for personal expense tracking. Provide clear, concise, and helpful natural language responses based on the provided user financial data. Format amounts in Indian Rupees (₹) when referencing expenses."
+            ));
+            messages.add(Map.of(
+                    "role", "user",
+                    "content", prompt
+            ));
 
-        messages.add(Map.of(
-                "role", "user",
-                "content", prompt
-        ));
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", 0.0);
 
-        requestBody.put("messages", messages);
-        requestBody.put("temperature", 0.0);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        HttpEntity<Map<String, Object>> entity =
-                new HttpEntity<>(requestBody, headers);
+            ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
+            return extractContent(response);
+        } catch (Exception e) {
+            log.warn("Groq API call failed ({}). Generating structured local fallback response.", e.getMessage());
+            return generateLocalFallback(userQuery, expenses);
+        }
+    }
 
-        ResponseEntity<Map> response =
-                restTemplate.postForEntity(apiUrl, entity, Map.class);
+    private String generateLocalFallback(String userQuery, List<ExpenseDto> expenses) {
+        if (expenses == null || expenses.isEmpty()) {
+            return "I couldn't find any recorded expenses matching your query. Try adding expenses or selecting another month.";
+        }
 
-        return extractContent(response);
+        int total = expenses.stream().mapToInt(e -> e.getAmount() != null ? e.getAmount() : 0).sum();
+        ExpenseDto highest = expenses.stream()
+                .max((a, b) -> Integer.compare(a.getAmount() != null ? a.getAmount() : 0, b.getAmount() != null ? b.getAmount() : 0))
+                .orElse(null);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("You have %d expense transaction(s) totaling ₹%,d.", expenses.size(), total));
+        if (highest != null) {
+            sb.append(String.format(" The largest recorded item is \"%s\" for ₹%,d.", highest.getDescription(), highest.getAmount()));
+        }
+
+        return sb.toString();
     }
 
     private String buildPrompt(String userQuery, List<ExpenseDto> expenses) {
@@ -71,7 +97,8 @@ public class AIResponseService {
                                 e.getDescription(), e.getAmount(), e.getDate(), e.getCategoryName(), e.getEventName()))
                         .reduce((a, b) -> a + "\n" + b)
                         .orElse("");
-return """
+
+        return """
         You are an assistant that helps users understand their expenses.
         User query: %s
         Here are the filtered expenses for the user query: %s
@@ -87,13 +114,17 @@ return """
     }
 
     private String extractContent(ResponseEntity<Map> response) {
-
         Map body = response.getBody();
+        if (body == null) return "No response received.";
 
         List choices = (List) body.get("choices");
+        if (choices == null || choices.isEmpty()) return "No response choices available.";
+
         Map choice = (Map) choices.get(0);
+        if (choice == null) return "Empty choice in response.";
 
         Map message = (Map) choice.get("message");
+        if (message == null || message.get("content") == null) return "No message content found.";
 
         return (String) message.get("content");
     }

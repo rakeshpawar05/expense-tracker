@@ -30,43 +30,74 @@ public class AIIntentService {
     @Value("${groq.api.url}")
     private String apiUrl;
 
+    @Value("${groq.api.model:llama-3.1-8b-instant}")
+    private String modelName;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     public IntentResult detect(String message) {
+        if (apiKey == null || apiKey.isBlank()) {
+            log.warn("Groq API key is missing. Using rule-based fallback intent detection.");
+            return fallbackIntentDetection(message);
+        }
 
-        String prompt = buildPrompt(message);
+        try {
+            String prompt = buildPrompt(message);
 
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "llama-3.3-70b-versatile");
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", modelName);
 
-        List<Map<String, String>> messages = new ArrayList<>();
+            List<Map<String, String>> messages = new ArrayList<>();
+            messages.add(Map.of(
+                    "role", "system",
+                    "content", "You extract structured JSON from user queries."
+            ));
+            messages.add(Map.of(
+                    "role", "user",
+                    "content", prompt
+            ));
 
-        messages.add(Map.of(
-                "role", "system",
-                "content", "You extract structured JSON from user queries."
-        ));
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", 0.0);
 
-        messages.add(Map.of(
-                "role", "user",
-                "content", prompt
-        ));
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
 
-        requestBody.put("messages", messages);
-        requestBody.put("temperature", 0.0);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
+            ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
+            String content = extractContent(response);
 
-        HttpEntity<Map<String, Object>> entity =
-                new HttpEntity<>(requestBody, headers);
+            return parseResponse(content);
+        } catch (Exception e) {
+            log.warn("Failed to detect intent via Groq API ({}). Falling back to rule-based parser.", e.getMessage());
+            return fallbackIntentDetection(message);
+        }
+    }
 
-        ResponseEntity<Map> response =
-                restTemplate.postForEntity(apiUrl, entity, Map.class);
+    private IntentResult fallbackIntentDetection(String message) {
+        String lower = message != null ? message.toLowerCase() : "";
+        String ym = YearMonth.now().toString();
 
-        String content = extractContent(response);
+        if (lower.contains("last month")) {
+            ym = YearMonth.now().minusMonths(1).toString();
+        }
 
-        return parseResponse(content);
+        if (lower.contains("top") || lower.contains("highest") || lower.contains("biggest")) {
+            return IntentResult.builder().intent(IntentType.TOP_EXPENSES).yearMonth(ym).build();
+        }
+        if (lower.contains("category")) {
+            return IntentResult.builder().intent(IntentType.CATEGORY_SUMMARY).yearMonth(ym).build();
+        }
+        if (lower.contains("event")) {
+            return IntentResult.builder().intent(IntentType.EVENT_SUMMARY).build();
+        }
+        if (lower.contains("total") || lower.contains("spent") || lower.contains("expense") || lower.contains("how much")) {
+            return IntentResult.builder().intent(IntentType.TOTAL_EXPENSE).yearMonth(ym).build();
+        }
+
+        return IntentResult.builder().intent(IntentType.UNKNOWN).yearMonth(ym).build();
     }
 
     private String buildPrompt(String message) {
@@ -105,7 +136,6 @@ Response format:
     }
 
     private String extractContent(ResponseEntity<Map> response) {
-
         Map body = response.getBody();
         if (body == null) return "{}";
 
@@ -119,7 +149,6 @@ Response format:
     }
 
     private IntentResult parseResponse(String json) {
-
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -139,12 +168,10 @@ Response format:
     private String cleanJson(String content) {
         if (content == null) return "{}";
 
-        // remove markdown
         content = content.replaceAll("```json", "")
                 .replaceAll("```", "")
                 .trim();
 
-        // extract only JSON block
         int firstBrace = content.indexOf('{');
         int lastBrace = content.lastIndexOf('}');
         if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
@@ -155,7 +182,6 @@ Response format:
     }
 
     private String resolveMonth(String yearMonth) {
-
         if (yearMonth == null || yearMonth.isBlank() || "null".equalsIgnoreCase(yearMonth)) {
             return null;
         }
@@ -178,7 +204,6 @@ Response format:
             }
         }
 
-        // fallback (if AI gives actual month like 2026-03)
         return yearMonth;
     }
 
