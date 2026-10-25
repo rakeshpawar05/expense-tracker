@@ -47,7 +47,12 @@ public class AIResponseService {
             List<Map<String, String>> messages = new ArrayList<>();
             messages.add(Map.of(
                     "role", "system",
-                    "content", "You are an intelligent, helpful financial assistant for personal expense tracking. Provide clear, concise, and helpful natural language responses based on the provided user financial data. Format amounts in Indian Rupees (₹) when referencing expenses."
+                    "content", "You are an intelligent, helpful financial advisor for personal expense tracking. " +
+                            "Provide clear, concise, and actionable responses based strictly on the provided user financial data. " +
+                            "Always format currency amounts in Indian Rupees (₹) with comma separators (e.g., ₹25,000). " +
+                            "When presenting category breakdowns, comparisons, or multiple transactions, format them using clean GitHub Markdown tables with clear column headers. " +
+                            "Highlight key totals, figures, and dates in bold (e.g., **₹90,498**). " +
+                            "Include a quick, helpful insight or observation when relevant."
             ));
             messages.add(Map.of(
                     "role", "user",
@@ -82,9 +87,9 @@ public class AIResponseService {
                 .orElse(null);
 
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format("You have %d expense transaction(s) totaling ₹%,d.", expenses.size(), total));
+        sb.append(String.format("You recorded **%d** transaction(s) totaling **₹%,d**.\n\n", expenses.size(), total));
         if (highest != null) {
-            sb.append(String.format(" The largest recorded item is \"%s\" for ₹%,d.", highest.getDescription(), highest.getAmount()));
+            sb.append(String.format("- **Top expense:** %s (**₹%,d** on %s)\n", highest.getDescription(), highest.getAmount(), highest.getDate()));
         }
 
         return sb.toString();
