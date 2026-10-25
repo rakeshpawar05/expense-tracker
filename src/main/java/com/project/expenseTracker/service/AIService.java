@@ -25,7 +25,7 @@ public class AIService {
 
         IntentResult intent = aiIntentService.detect(request.getMessage());
 
-        final YearMonth yearMonth = intent.getYearMonth() != null ? YearMonth.parse(intent.getYearMonth()): null;
+        final YearMonth yearMonth = parseYearMonthSafely(intent.getYearMonth());
         return switch (intent.getIntent()) {
             case TOTAL_EXPENSE -> getTotalExpense(request, yearMonth);
             case TOP_EXPENSES -> getTopExpenses(request, yearMonth);
@@ -117,5 +117,16 @@ public class AIService {
     private String getGenericResponse(AIRequest aiRequest) {
 
         return aiResponseService.generateResponse(aiRequest.getMessage(), List.of());
+    }
+
+    private YearMonth parseYearMonthSafely(String ymStr) {
+        if (ymStr == null || ymStr.isBlank()) {
+            return null;
+        }
+        try {
+            return YearMonth.parse(ymStr);
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

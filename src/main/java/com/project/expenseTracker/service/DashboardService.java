@@ -7,7 +7,6 @@ import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
 import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
-import com.project.expenseTracker.repository.MonthRepository;
 import com.project.expenseTracker.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,8 +32,22 @@ public class DashboardService {
                 () -> new ResourceNotFoundException("User not found")
         );
 
-        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth)
-                .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
+        Optional<Month> monthOptional = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
+        if (monthOptional.isEmpty()) {
+            return DashboardDto.builder()
+                    .monthName(yearMonth != null ? yearMonth.getMonth().name() : null)
+                    .monthYear(yearMonth != null ? yearMonth.getYear() : null)
+                    .yearMonth(yearMonth)
+                    .totalEarning(0.0)
+                    .totalExpense(0.0)
+                    .balance(0.0)
+                    .topExpenses(Collections.emptyList())
+                    .categoryBreakdown(Collections.emptyList())
+                    .totalTransactions(0)
+                    .build();
+        }
+
+        Month month = monthOptional.get();
 
         // Get all expenses for the month
         List<Expense> monthExpenses = month.getExpenses() != null ? month.getExpenses() : new ArrayList<>();
@@ -81,7 +94,7 @@ public class DashboardService {
                                 Collectors.toList(),
                                 categoryExpenses -> {
                                     Double totalAmount = categoryExpenses.stream()
-                                            .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                                             .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
                                             .sum();
                                     return CategorySummaryDto.builder()
                                             .categoryName(categoryExpenses.get(0).getCategory().getName())
@@ -97,4 +110,3 @@ public class DashboardService {
                 .toList();
     }
 }
-

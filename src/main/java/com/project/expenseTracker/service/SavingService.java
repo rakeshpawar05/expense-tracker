@@ -11,6 +11,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -50,7 +51,7 @@ public class SavingService {
         }
 
         Optional<Category> category = Optional.empty();
-        if (!savingDto.getCategoryName().isEmpty()) {
+        if (savingDto.getCategoryName() != null && !savingDto.getCategoryName().isEmpty()) {
             // Use case-insensitive lookup for category names
             category = categoryRepository.findByNameIgnoreCaseAndMonthIdAndUserId(savingDto.getCategoryName(), month.getId(), user.getId());
             if(category.isEmpty()){
@@ -65,7 +66,10 @@ public class SavingService {
         }
 
         // Use case-insensitive lookup for events as well
-        Optional<Event> event = eventRepository.findByNameIgnoreCase(savingDto.getEventName());
+        Optional<Event> event = Optional.empty();
+        if (savingDto.getEventName() != null && !savingDto.getEventName().isEmpty()) {
+            event = eventRepository.findByNameIgnoreCase(savingDto.getEventName());
+        }
 
         Saving saving = mapDtoToEntity(null, savingDto, month, category.orElse(null), user, event.orElse(null));
         return savingRepository.save(saving).getId();
@@ -85,22 +89,10 @@ public class SavingService {
     }
 
     public List<SavingDto> getSavings(Long userId, YearMonth yearMonth, String categoryName, String savingName){
-//        String name = null;
-//        Integer year = null;
-//        if(monthName != null){
-//            name = monthName.split(",")[0];
-//            year = Integer.parseInt(monthName.split(",")[1]);
-//        }
-
         List<Saving> savings = savingRepository.findByFilters(userId, yearMonth == null ? null : yearMonth.getMonthValue(),
                 yearMonth == null ? null : yearMonth.getYear(), categoryName, savingName);
         return savings.stream().map(SavingService::mapEntityToDTo).sorted(Comparator.comparing(SavingDto::getDate)).toList();
     }
-
-//    public List<SavingDto> getSavingByCategory(Long categoryId){
-//        List<Saving> savings = savingRepository.findByCategoryId(categoryId);
-//        return savings.stream().map(SavingService::mapEntityToDTo).toList();
-//    }
 
     public long deleteSavingById(Long id){
         savingRepository.deleteById(id);
@@ -132,7 +124,9 @@ public class SavingService {
                 .description(saving.getDescription())
                 .date(saving.getDate())
                 .monthName(saving.getMonth().getName() +","+ saving.getMonth().getYear())
-                .yearMonth(YearMonth.of(saving.getMonth().getYearNum(), saving.getMonth().getMonthNum()))
+                .yearMonth(saving.getMonth().getYearNum() != null && saving.getMonth().getMonthNum() != null
+                        ? YearMonth.of(saving.getMonth().getYearNum(), saving.getMonth().getMonthNum())
+                        : null)
                 .eventName(saving.getEvent() != null ? saving.getEvent().getName() : null)
                 .categoryName(saving.getCategory() != null ? saving.getCategory().getName() : null)
                 .userId(saving.getUser().getId())
@@ -140,9 +134,20 @@ public class SavingService {
     }
 
     public List<SavingDto> getTop5ByMonth(Long userId, YearMonth yearMonth){
-        Month month = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth)
-                .orElseThrow(() -> new ResourceNotFoundException("Month not found"));
-        return month.getSavings().stream().sorted(Comparator.comparing(Saving::getAmount).reversed()).limit(5).
-    map(SavingService::mapEntityToDTo).toList();
+        Optional<Month> monthOpt = monthService.getMonthByUserIdAndYearMonth(userId, yearMonth);
+        if (monthOpt.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Month month = monthOpt.get();
+        if (month.getSavings() == null) {
+            return Collections.emptyList();
+        }
+
+        return month.getSavings().stream()
+                .sorted(Comparator.comparing(Saving::getAmount).reversed())
+                .limit(5)
+                .map(SavingService::mapEntityToDTo)
+                .toList();
     }
 }

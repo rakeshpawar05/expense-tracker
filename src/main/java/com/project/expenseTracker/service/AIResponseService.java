@@ -40,7 +40,7 @@ public class AIResponseService {
 
         messages.add(Map.of(
                 "role", "system",
-                "content", "You extract structured JSON from user queries."
+                "content", "You are an intelligent, helpful financial assistant for personal expense tracking. Provide clear, concise, and helpful natural language responses based on the provided user financial data. Format amounts in Indian Rupees (₹) when referencing expenses."
         ));
 
         messages.add(Map.of(

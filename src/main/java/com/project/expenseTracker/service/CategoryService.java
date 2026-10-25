@@ -9,12 +9,12 @@ import com.project.expenseTracker.entity.User;
 import com.project.expenseTracker.exception.ResourceNotFoundException;
 import com.project.expenseTracker.repository.CategoryRepository;
 import com.project.expenseTracker.repository.ExpenseRepository;
-import com.project.expenseTracker.repository.MonthRepository;
 import com.project.expenseTracker.repository.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -50,6 +50,9 @@ public class CategoryService {
     }
 
     public List<CategoryDto> getCategoryByMonthId(Long userId, YearMonth yearMonth){
+        if (yearMonth == null) {
+            return Collections.emptyList();
+        }
         List<Category> categories = categoryRepository.findByUserIdAndMonthYearNumAndMonthMonthNum(userId, yearMonth.getYear(), yearMonth.getMonthValue());
         return categories.stream().map(CategoryService::mapEntityToDto).toList();
     }
@@ -86,14 +89,20 @@ public class CategoryService {
                 .id(category.getId())
                 .name(category.getName())
                 .monthName(category.getMonth().getName() + "," + category.getMonth().getYear())
-                .yearMonth(YearMonth.of(category.getMonth().getYearNum(), category.getMonth().getMonthNum()))
+                .yearMonth(category.getMonth().getYearNum() != null && category.getMonth().getMonthNum() != null
+                        ? YearMonth.of(category.getMonth().getYearNum(), category.getMonth().getMonthNum())
+                        : null)
                 .userId(category.getUser().getId())
-                .expenses(category.getExpenses().stream()
-                        .filter(expense -> expense.getMonth() == category.getMonth())
-                        .map(ExpenseService::mapEntityToDTo).toList())
-                .savings(category.getSavings().stream()
-                        .filter(saving -> saving.getMonth() == category.getMonth())
-                        .map(SavingService::mapEntityToDTo).toList())
+                .expenses(category.getExpenses() != null
+                        ? category.getExpenses().stream()
+                                .filter(expense -> expense.getMonth() == category.getMonth())
+                                .map(ExpenseService::mapEntityToDTo).toList()
+                        : Collections.emptyList())
+                .savings(category.getSavings() != null
+                        ? category.getSavings().stream()
+                                .filter(saving -> saving.getMonth() == category.getMonth())
+                                .map(SavingService::mapEntityToDTo).toList()
+                        : Collections.emptyList())
                 .build();
     }
 

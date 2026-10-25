@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,15 +37,19 @@ public class MonthService {
 
     public Long createMonth(MonthDto monthDto){
         User user = userRepository.findById(monthDto.getUserId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        Optional<Month> existingMonth = monthRepository.findByMonthNumAndYearNumAndUserId(monthDto.getYearMonth().getMonthValue(),
-                monthDto.getYearMonth().getYear(), user.getId());
+        
+        int monthNum = monthDto.getYearMonth() != null ? monthDto.getYearMonth().getMonthValue()
+                : (monthDto.getName() != null ? java.time.Month.valueOf(getMonthName(monthDto.getName()).toUpperCase()).getValue() : java.time.LocalDate.now().getMonthValue());
+        int yearNum = monthDto.getYearMonth() != null ? monthDto.getYearMonth().getYear()
+                : (monthDto.getName() != null && monthDto.getName().contains(",") ? Integer.parseInt(monthDto.getName().split(",")[1]) : java.time.LocalDate.now().getYear());
+
+        Optional<Month> existingMonth = monthRepository.findByMonthNumAndYearNumAndUserId(monthNum, yearNum, user.getId());
         if(existingMonth.isPresent()){
             throw new DuplicateResourceException("Month already exist");
         }
         Month month = mapDtoToEntity(null, monthDto, user);
         return monthRepository.save(month).getId();
     }
-
 
     public static String getMonthName(String name) {
         return name != null ? name.split(",")[0] : null;
@@ -68,8 +72,8 @@ public class MonthService {
     }
 
     public List<MonthDto> getMonths(Long userId, YearMonth yearMonth){
-        List<Month> months = monthRepository.findByFilters(userId, yearMonth != null ?yearMonth.getMonthValue(): null,
-                yearMonth!= null ?yearMonth.getYear(): null);
+        List<Month> months = monthRepository.findByFilters(userId, yearMonth != null ? yearMonth.getMonthValue() : null,
+                yearMonth != null ? yearMonth.getYear() : null);
         return months.stream().map(MonthService::mapEntityToDto).toList();
     }
 
@@ -80,51 +84,66 @@ public class MonthService {
         return id;
     }
 
-
     private Month mapDtoToEntity(Month existingMonth, MonthDto monthDto, User user){
-        String name = getMonthName(monthDto.getName());
-        int year = monthDto.getYearMonth().getYear();
+        String name = monthDto.getName() != null ? getMonthName(monthDto.getName()) : (monthDto.getYearMonth() != null ? monthDto.getYearMonth().getMonth().name() : null);
+        int year = monthDto.getYearMonth() != null ? monthDto.getYearMonth().getYear()
+                : (monthDto.getName() != null && monthDto.getName().contains(",") ? Integer.parseInt(monthDto.getName().split(",")[1]) : java.time.LocalDate.now().getYear());
+        int yearNum = monthDto.getYearMonth() != null ? monthDto.getYearMonth().getYear() : year;
+        int monthNum = monthDto.getYearMonth() != null ? monthDto.getYearMonth().getMonthValue()
+                : (name != null ? java.time.Month.valueOf(name.toUpperCase()).getValue() : java.time.LocalDate.now().getMonthValue());
+
         if(existingMonth != null){
             existingMonth.setName(name);
             existingMonth.setYear(year);
-            existingMonth.setYearNum(monthDto.getYearMonth().getYear());
-            existingMonth.setMonthNum(monthDto.getYearMonth().getMonthValue());
+            existingMonth.setYearNum(yearNum);
+            existingMonth.setMonthNum(monthNum);
             existingMonth.setEarning(monthDto.getEarning());
             return existingMonth;
         } else {
-        return Month.builder()
-                .name(name)
-                .year(year)
-                .yearNum(monthDto.getYearMonth().getYear())
-                .monthNum(monthDto.getYearMonth().getMonthValue())
-                .earning(monthDto.getEarning())
-                .user(user)
-                .build();
+            return Month.builder()
+                    .name(name)
+                    .year(year)
+                    .yearNum(yearNum)
+                    .monthNum(monthNum)
+                    .earning(monthDto.getEarning())
+                    .user(user)
+                    .build();
         }
     }
 
     public static MonthDto mapEntityToDto(Month month){
         return MonthDto.builder()
                 .id(month.getId())
-                .name(month.getName()+","+month.getYear())
-                .yearMonth(YearMonth.of(month.getYearNum(), month.getMonthNum()))
+                .name(month.getName() + (month.getYear() != null ? "," + month.getYear() : ""))
+                .yearMonth(month.getYearNum() != null && month.getMonthNum() != null
+                        ? YearMonth.of(month.getYearNum(), month.getMonthNum())
+                        : null)
                 .earning(month.getEarning())
                 .userId(month.getUser().getId())
-                .categories(month.getCategories().stream().map(CategoryService::mapEntityToDto).toList())
-                .expenses(month.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList())
-                .savings(month.getSavings().stream().map(SavingService::mapEntityToDTo).toList())
+                .categories(month.getCategories() != null
+                        ? month.getCategories().stream().map(CategoryService::mapEntityToDto).toList()
+                        : Collections.emptyList())
+                .expenses(month.getExpenses() != null
+                        ? month.getExpenses().stream().map(ExpenseService::mapEntityToDTo).toList()
+                        : Collections.emptyList())
+                .savings(month.getSavings() != null
+                        ? month.getSavings().stream().map(SavingService::mapEntityToDTo).toList()
+                        : Collections.emptyList())
                 .build();
     }
 
     public List<String> getMonthNamesByUserId(Long userId) {
         List<Month> months = monthRepository.findByUserId(userId);
-        return months.stream().map(month -> YearMonth.of(month.getYearNum(), month.getMonthNum()).toString()).toList();
-//        return months.stream().sorted(Comparator.comparingInt(
-//                month -> java.time.Month.valueOf(month.getName().toUpperCase()).getValue()))
-//                .map(month -> month.getName() + "," + month.getYear()).toList();
+        return months.stream()
+                .filter(month -> month.getYearNum() != null && month.getMonthNum() != null)
+                .map(month -> YearMonth.of(month.getYearNum(), month.getMonthNum()).toString())
+                .toList();
     }
 
     public Optional<Month> getMonthByUserIdAndYearMonth(Long userId, YearMonth yearMonth){
+        if (yearMonth == null) {
+            return Optional.empty();
+        }
         return monthRepository.findByMonthNumAndYearNumAndUserId(yearMonth.getMonthValue(), yearMonth.getYear(), userId);
     }
 
