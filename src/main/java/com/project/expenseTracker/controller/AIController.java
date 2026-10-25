@@ -1,7 +1,9 @@
 package com.project.expenseTracker.controller;
 
 import com.project.expenseTracker.dto.AIInsightDto;
+import com.project.expenseTracker.dto.AIParseExpenseRequest;
 import com.project.expenseTracker.dto.AIRequest;
+import com.project.expenseTracker.dto.ParsedExpenseDto;
 import com.project.expenseTracker.service.AIService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,5 +30,11 @@ public class AIController {
             @RequestParam(name = "yearMonth", required = false) YearMonth yearMonth) {
         AIInsightDto insight = aiService.getMonthlyInsight(userId, yearMonth);
         return ResponseEntity.ok(insight);
+    }
+
+    @PostMapping("/parse-expense")
+    public ResponseEntity<ParsedExpenseDto> parseExpense(@RequestBody AIParseExpenseRequest request) {
+        ParsedExpenseDto parsed = aiService.parseExpense(request);
+        return ResponseEntity.ok(parsed);
     }
 }

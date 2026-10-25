@@ -1,11 +1,16 @@
 package com.project.expenseTracker.service;
 
 import com.project.expenseTracker.dto.AIInsightDto;
+import com.project.expenseTracker.dto.AIParseExpenseRequest;
 import com.project.expenseTracker.dto.AIRequest;
 import com.project.expenseTracker.dto.ExpenseDto;
 import com.project.expenseTracker.dto.IntentResult;
+import com.project.expenseTracker.dto.ParsedExpenseDto;
+import com.project.expenseTracker.entity.Category;
+import com.project.expenseTracker.entity.Event;
 import com.project.expenseTracker.entity.Expense;
 import com.project.expenseTracker.entity.Month;
+import com.project.expenseTracker.repository.EventRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,8 +28,45 @@ public class AIService {
 
     private final ExpenseService expenseService;
     private final MonthService monthService;
+    private final EventRepository eventRepository;
     private final AIIntentService aiIntentService;
     private final AIResponseService aiResponseService;
+
+    public ParsedExpenseDto parseExpense(AIParseExpenseRequest request) {
+        String effectiveDate = request.getDefaultDate() != null && !request.getDefaultDate().isBlank()
+                ? request.getDefaultDate()
+                : LocalDate.now().toString();
+
+        List<String> availableCategories = Collections.emptyList();
+        List<String> availableEvents = Collections.emptyList();
+
+        if (request.getUserId() != null) {
+            try {
+                YearMonth ym = request.getYearMonth() != null ? request.getYearMonth() : YearMonth.from(LocalDate.parse(effectiveDate));
+                Optional<Month> mOpt = monthService.getMonthByUserIdAndYearMonth(request.getUserId(), ym);
+                if (mOpt.isPresent() && mOpt.get().getCategories() != null) {
+                    availableCategories = mOpt.get().getCategories().stream()
+                            .map(Category::getName)
+                            .toList();
+                }
+
+                List<Event> userEvents = eventRepository.findByUserId(request.getUserId());
+                if (userEvents != null) {
+                    availableEvents = userEvents.stream()
+                            .map(Event::getName)
+                            .toList();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        return aiResponseService.parseExpenseText(
+                request.getText(),
+                effectiveDate,
+                availableCategories,
+                availableEvents
+        );
+    }
 
     public String processQuery(AIRequest request) {
 

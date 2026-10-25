@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.expenseTracker.dto.AIInsightDto;
 import com.project.expenseTracker.dto.ExpenseDto;
+import com.project.expenseTracker.dto.ParsedExpenseDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -13,11 +14,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -313,5 +317,223 @@ public class AIResponseService {
         if (message == null || message.get("content") == null) return "No message content found.";
 
         return (String) message.get("content");
+    }
+
+    public ParsedExpenseDto parseExpenseText(
+            String text,
+            String todayDate,
+            List<String> availableCategories,
+            List<String> availableEvents
+    ) {
+        if (text == null || text.isBlank()) {
+            return ParsedExpenseDto.builder().build();
+        }
+
+        String effectiveDate = (todayDate != null && !todayDate.isBlank())
+                ? todayDate
+                : LocalDate.now().toString();
+
+        if (apiKey != null && !apiKey.isBlank()) {
+            try {
+                String systemPrompt = "You are a specialized financial transaction entity extractor. Extract the expense details from the user's natural language or bank/UPI transaction SMS text. Return strictly a JSON object with keys: description, amount (integer), date (YYYY-MM-DD), categoryName, eventName (or null if none). No markdown wrapping, no extra keys.";
+
+                String userPrompt = String.format("""
+                        Reference Information:
+                        - Today's date: %s
+                        - User's existing categories: %s
+                        - User's existing events: %s
+
+                        Text to parse:
+                        "%s"
+
+                        Extraction Instructions:
+                        1. "description": Clean merchant, vendor, or item name (e.g., "Social", "Uber", "Swiggy", "Grocery", "Movie Tickets"). Avoid generic prefixes like "Paid to", "spent on", "debited for".
+                        2. "amount": Pure integer number in Rupees (e.g., 1450). Remove any currency symbols (₹, Rs, INR) or commas.
+                        3. "date": ISO format "YYYY-MM-DD". If "yesterday", compute relative to today's date (%s). If a specific date like "24-Oct" is given, use the year from today's date. If no date is mentioned, use "%s".
+                        4. "categoryName": Choose the best matching category. Prefer one from the existing categories list if relevant; otherwise choose a standard category (e.g., Food & Dining, Travel, Bills & Utilities, Shopping, Entertainment, Health & Fitness, Grocery, General).
+                        5. "eventName": If the text refers to a trip, event, vacation, or festival (e.g., "Goa trip", "Diwali", "Wedding"), map it to the closest existing event or provide the event name. If no event is referenced, return null.
+
+                        Output JSON format:
+                        {
+                          "description": "...",
+                          "amount": 1000,
+                          "date": "%s",
+                          "categoryName": "...",
+                          "eventName": null
+                        }
+                        """,
+                        effectiveDate,
+                        availableCategories != null && !availableCategories.isEmpty() ? String.join(", ", availableCategories) : "None",
+                        availableEvents != null && !availableEvents.isEmpty() ? String.join(", ", availableEvents) : "None",
+                        text.trim(),
+                        effectiveDate,
+                        effectiveDate,
+                        effectiveDate
+                );
+
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("model", modelName);
+                requestBody.put("messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", userPrompt)
+                ));
+                requestBody.put("temperature", 0.0);
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.setBearerAuth(apiKey);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+                ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
+                String content = extractContent(response);
+
+                String cleanedJson = cleanJsonContent(content);
+                JsonNode root = objectMapper.readTree(cleanedJson);
+
+                String description = root.has("description") ? root.get("description").asText().trim() : null;
+                Integer amount = root.has("amount") && !root.get("amount").isNull() ? root.get("amount").asInt() : null;
+                String date = root.has("date") && !root.get("date").isNull() ? root.get("date").asText().trim() : effectiveDate;
+                String categoryName = root.has("categoryName") && !root.get("categoryName").isNull() ? root.get("categoryName").asText().trim() : "General";
+                String eventName = root.has("eventName") && !root.get("eventName").isNull() ? root.get("eventName").asText().trim() : null;
+                if ("null".equalsIgnoreCase(eventName) || (eventName != null && eventName.isBlank())) {
+                    eventName = null;
+                }
+
+                if (description != null && !description.isBlank() && amount != null && amount > 0) {
+                    return ParsedExpenseDto.builder()
+                            .description(description)
+                            .amount(amount)
+                            .date(date != null && !date.isBlank() ? date : effectiveDate)
+                            .categoryName(categoryName)
+                            .eventName(eventName)
+                            .confidence(0.95)
+                            .rawInput(text)
+                            .build();
+                }
+            } catch (Exception e) {
+                log.warn("Groq expense parsing failed ({}). Falling back to heuristic rule-based parser.", e.getMessage());
+            }
+        }
+
+        return fallbackParseExpense(text, effectiveDate, availableCategories, availableEvents);
+    }
+
+    private ParsedExpenseDto fallbackParseExpense(
+            String text,
+            String effectiveDate,
+            List<String> availableCategories,
+            List<String> availableEvents
+    ) {
+        String lower = text.toLowerCase();
+
+        // 1. Extract Amount
+        Integer amount = null;
+        Pattern amountPattern = Pattern.compile("(?i)(?:₹|rs\\.?|inr)\\s*([\\d,]+(?:\\.\\d+)?)|([\\d,]+(?:\\.\\d+)?)\\s*(?:₹|rs\\.?|inr)");
+        Matcher matcher = amountPattern.matcher(text);
+        if (matcher.find()) {
+            String val = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
+            val = val.replace(",", "");
+            try {
+                amount = (int) Math.round(Double.parseDouble(val));
+            } catch (Exception ignored) {}
+        }
+
+        if (amount == null) {
+            Pattern numberPattern = Pattern.compile("\\b(\\d{2,6})\\b");
+            Matcher numMatcher = numberPattern.matcher(text);
+            if (numMatcher.find()) {
+                try {
+                    amount = Integer.parseInt(numMatcher.group(1));
+                } catch (Exception ignored) {}
+            }
+        }
+
+        if (amount == null) {
+            amount = 100;
+        }
+
+        // 2. Extract Date
+        String resolvedDate = effectiveDate;
+        try {
+            LocalDate today = LocalDate.parse(effectiveDate);
+            if (lower.contains("yesterday")) {
+                resolvedDate = today.minusDays(1).toString();
+            } else if (lower.contains("today")) {
+                resolvedDate = today.toString();
+            } else {
+                Pattern datePattern = Pattern.compile("\\b(\\d{4}-\\d{2}-\\d{2})\\b");
+                Matcher dm = datePattern.matcher(text);
+                if (dm.find()) {
+                    resolvedDate = dm.group(1);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 3. Extract Category
+        String category = "General";
+        if (availableCategories != null) {
+            for (String cat : availableCategories) {
+                if (lower.contains(cat.toLowerCase())) {
+                    category = cat;
+                    break;
+                }
+            }
+        }
+
+        if ("General".equals(category)) {
+            if (lower.contains("swiggy") || lower.contains("zomato") || lower.contains("dinner") || lower.contains("lunch")
+                    || lower.contains("food") || lower.contains("coffee") || lower.contains("starbucks") || lower.contains("burger")) {
+                category = "Food";
+            } else if (lower.contains("uber") || lower.contains("ola") || lower.contains("flight") || lower.contains("petrol")
+                    || lower.contains("fuel") || lower.contains("train") || lower.contains("travel")) {
+                category = "Travel";
+            } else if (lower.contains("netflix") || lower.contains("movie") || lower.contains("cinema") || lower.contains("game")) {
+                category = "Entertainment";
+            } else if (lower.contains("amazon") || lower.contains("flipkart") || lower.contains("myntra") || lower.contains("shopping")) {
+                category = "Shopping";
+            } else if (lower.contains("wifi") || lower.contains("electricity") || lower.contains("rent") || lower.contains("recharge") || lower.contains("bill")) {
+                category = "Bills";
+            } else if (lower.contains("doctor") || lower.contains("medicine") || lower.contains("hospital") || lower.contains("pharmacy")) {
+                category = "Health";
+            } else if (lower.contains("grocery") || lower.contains("blinkit") || lower.contains("zepto") || lower.contains("bigbasket")) {
+                category = "Grocery";
+            }
+        }
+
+        // 4. Extract Event
+        String eventName = null;
+        if (availableEvents != null) {
+            for (String ev : availableEvents) {
+                if (lower.contains(ev.toLowerCase())) {
+                    eventName = ev;
+                    break;
+                }
+            }
+        }
+
+        // 5. Clean Description
+        String description = text
+                .replaceAll("(?i)(?:₹|rs\\.?|inr)\\s*[\\d,]+(?:\\.\\d+)?", "")
+                .replaceAll("(?i)[\\d,]+(?:\\.\\d+)?\\s*(?:₹|rs\\.?|inr)", "")
+                .replaceAll("(?i)\\b(paid to|paid|debited by|debited for|spent on|using upi|acct xx\\d+|ref no:?\\s*\\w+)\\b", "")
+                .replaceAll("(?i)\\b(yesterday|today|tomorrow)\\b", "")
+                .replaceAll("(?i)\\bfor\\s+\\w+\\s+trip\\b", "")
+                .trim();
+
+        if (description.isBlank()) {
+            description = "Expense";
+        } else if (description.length() > 40) {
+            description = description.substring(0, 40).trim();
+        }
+
+        return ParsedExpenseDto.builder()
+                .description(description)
+                .amount(amount)
+                .date(resolvedDate)
+                .categoryName(category)
+                .eventName(eventName)
+                .confidence(0.75)
+                .rawInput(text)
+                .build();
     }
 }
