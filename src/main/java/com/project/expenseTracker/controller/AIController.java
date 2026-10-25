@@ -3,6 +3,7 @@ package com.project.expenseTracker.controller;
 import com.project.expenseTracker.dto.AICategoryInsightDto;
 import com.project.expenseTracker.dto.AIEventInsightDto;
 import com.project.expenseTracker.dto.AIInsightDto;
+import com.project.expenseTracker.dto.AIMonthDeltaInsightDto;
 import com.project.expenseTracker.dto.AIParseExpenseRequest;
 import com.project.expenseTracker.dto.AIRequest;
 import com.project.expenseTracker.dto.ParsedExpenseDto;
@@ -56,6 +57,15 @@ public class AIController {
             @RequestParam(name = "eventId", required = false) Long eventId,
             @RequestParam(name = "eventName", required = false) String eventName) {
         AIEventInsightDto insight = aiService.getEventInsight(userId, eventId, eventName);
+        return ResponseEntity.ok(insight);
+    }
+
+    @GetMapping("/month-delta")
+    public ResponseEntity<AIMonthDeltaInsightDto> getMonthDeltaInsight(
+            @RequestParam("userId") Long userId,
+            @RequestParam(name = "yearMonth", required = false) YearMonth yearMonth,
+            @RequestParam(name = "compareYearMonth", required = false) YearMonth compareYearMonth) {
+        AIMonthDeltaInsightDto insight = aiService.getMonthDeltaInsight(userId, yearMonth, compareYearMonth);
         return ResponseEntity.ok(insight);
     }
 }

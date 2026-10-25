@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.expenseTracker.dto.AICategoryInsightDto;
 import com.project.expenseTracker.dto.AIEventInsightDto;
 import com.project.expenseTracker.dto.AIInsightDto;
+import com.project.expenseTracker.dto.AIMonthDeltaInsightDto;
+import com.project.expenseTracker.dto.CategoryMoMDeltaDto;
 import com.project.expenseTracker.dto.ExpenseDto;
 import com.project.expenseTracker.dto.ParsedExpenseDto;
 import lombok.extern.slf4j.Slf4j;
@@ -848,6 +850,184 @@ public class AIResponseService {
             insight = String.format("Across %d transaction(s) over %d day(s), %s accrued ₹%,.0f (averaging ₹%,.0f/day). Leading outflow was '%s' (₹%,.0f).",
                     transactionCount, activeDays, eventName, totalSpent, dailyBurnRate, largestDesc, largestAmount);
             takeaway = String.format("Pacing remained stable throughout %s with %s being the key driver.", eventName, topCategory);
+        }
+
+        return builder
+                .headline(headline)
+                .insight(insight)
+                .takeaway(takeaway)
+                .build();
+    }
+
+    public AIMonthDeltaInsightDto generateMonthDeltaInsight(
+            String currentYm,
+            String previousYm,
+            Double currentSpent,
+            Double previousSpent,
+            Double absoluteChange,
+            Double percentageChange,
+            Double currentEarning,
+            Double previousEarning,
+            Double currentSavingsRate,
+            Double previousSavingsRate,
+            int currentTxCount,
+            int previousTxCount,
+            String topSurgeCategory,
+            Double topSurgeAmount,
+            Double topSurgePercentage,
+            String topCoolingCategory,
+            Double topCoolingAmount,
+            Double topCoolingPercentage,
+            List<CategoryMoMDeltaDto> categoryDeltas,
+            String defaultVerdict
+    ) {
+        AIMonthDeltaInsightDto.AIMonthDeltaInsightDtoBuilder builder = AIMonthDeltaInsightDto.builder()
+                .currentYearMonth(currentYm)
+                .previousYearMonth(previousYm)
+                .currentTotalSpent(currentSpent)
+                .previousTotalSpent(previousSpent)
+                .absoluteChange(absoluteChange)
+                .percentageChange(percentageChange)
+                .currentEarning(currentEarning)
+                .previousEarning(previousEarning)
+                .currentSavingsRate(currentSavingsRate)
+                .previousSavingsRate(previousSavingsRate)
+                .currentTransactionCount(currentTxCount)
+                .previousTransactionCount(previousTxCount)
+                .topSurgeCategory(topSurgeCategory)
+                .topSurgeAmount(topSurgeAmount)
+                .topSurgePercentage(topSurgePercentage)
+                .topCoolingCategory(topCoolingCategory)
+                .topCoolingAmount(topCoolingAmount)
+                .topCoolingPercentage(topCoolingPercentage)
+                .categoryDeltas(categoryDeltas)
+                .verdictTag(defaultVerdict);
+
+        if (apiKey != null && !apiKey.isBlank()) {
+            try {
+                String systemPrompt = """
+                        You are a personal finance AI advisor specialized in Month-over-Month (MoM) comparative spending velocity analysis.
+                        Analyze the trajectory shift between two consecutive billing months. Focus on:
+                        1. Outflow Shift: Did spending accelerate, contract, or remain stable?
+                        2. Category Movers: Highlight which category drove the surge vs which saved money.
+                        3. Savings Rate: Analyze if the surplus expanded or shrunk.
+                        
+                        Respond ONLY with a valid JSON object with exact keys:
+                        {
+                          "headline": "punchy 5-9 word headline capturing the shift",
+                          "insight": "2-3 concise conversational sentences analyzing the delta and category swings in Indian Rupees (₹)",
+                          "takeaway": "1 single crisp strategic financial recommendation for the upcoming cycle",
+                          "verdictTag": "2-3 word tag like 'Disciplined Contraction', 'High Outflow Surge', 'Moderate Creep', 'Frugal Savings', or 'Balanced Flow'"
+                        }
+                        No markdown formatting around the JSON, no explanation outside JSON.
+                        """;
+
+                String catDeltasSummary = categoryDeltas != null
+                        ? categoryDeltas.stream()
+                        .limit(4)
+                        .map(c -> String.format("%s (%s₹%,.0f)", c.getCategoryName(), c.getAbsoluteChange() >= 0 ? "+" : "", c.getAbsoluteChange()))
+                        .reduce((a, b) -> a + ", " + b).orElse("None")
+                        : "None";
+
+                String userPrompt = String.format("""
+                        MoM Comparison Metrics:
+                        - Current Month (%s): ₹%,.0f total outflow across %d txns (Income: ₹%,.0f, Savings Rate: %.1f%%)
+                        - Previous Month (%s): ₹%,.0f total outflow across %d txns (Income: ₹%,.0f, Savings Rate: %.1f%%)
+                        - Net Delta: %s₹%,.0f (%+.1f%%)
+                        - Top Surging Category: %s (+₹%,.0f, %+.1f%%)
+                        - Top Cooling Category: %s (%s₹%,.0f, %+.1f%%)
+                        - Notable Category Movers: %s
+                        - Suggested Default Verdict: %s
+                        """,
+                        currentYm, currentSpent, currentTxCount, currentEarning, currentSavingsRate,
+                        previousYm, previousSpent, previousTxCount, previousEarning, previousSavingsRate,
+                        absoluteChange >= 0 ? "+" : "", absoluteChange, percentageChange,
+                        topSurgeCategory != null ? topSurgeCategory : "None", topSurgeAmount, topSurgePercentage,
+                        topCoolingCategory != null ? topCoolingCategory : "None", topCoolingAmount < 0 ? "-" : "+", Math.abs(topCoolingAmount), topCoolingPercentage,
+                        catDeltasSummary,
+                        defaultVerdict
+                );
+
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("model", modelName);
+                requestBody.put("messages", List.of(
+                        Map.of("role", "system", "content", systemPrompt),
+                        Map.of("role", "user", "content", userPrompt)
+                ));
+                requestBody.put("temperature", 0.2);
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.setBearerAuth(apiKey);
+
+                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+                ResponseEntity<Map> response = restTemplate.postForEntity(apiUrl, entity, Map.class);
+                String content = extractContent(response);
+
+                String cleanedJson = cleanJsonContent(content);
+                JsonNode root = objectMapper.readTree(cleanedJson);
+
+                if (root.has("headline") && !root.get("headline").asText().isBlank()) {
+                    builder.headline(root.get("headline").asText());
+                }
+                if (root.has("insight") && !root.get("insight").asText().isBlank()) {
+                    builder.insight(root.get("insight").asText());
+                }
+                if (root.has("takeaway") && !root.get("takeaway").asText().isBlank()) {
+                    builder.takeaway(root.get("takeaway").asText());
+                }
+                if (root.has("verdictTag") && !root.get("verdictTag").asText().isBlank()) {
+                    builder.verdictTag(root.get("verdictTag").asText());
+                }
+
+                AIMonthDeltaInsightDto result = builder.build();
+                if (result.getHeadline() != null && result.getInsight() != null) {
+                    return result;
+                }
+            } catch (Exception e) {
+                log.warn("Groq month delta insight call failed ({}). Using deterministic fallback.", e.getMessage());
+            }
+        }
+
+        return generateDeterministicMonthDeltaInsight(builder, currentYm, previousYm, currentSpent, previousSpent,
+                absoluteChange, percentageChange, topSurgeCategory, topSurgeAmount, topCoolingCategory, topCoolingAmount);
+    }
+
+    private AIMonthDeltaInsightDto generateDeterministicMonthDeltaInsight(
+            AIMonthDeltaInsightDto.AIMonthDeltaInsightDtoBuilder builder,
+            String currentYm,
+            String previousYm,
+            Double currentSpent,
+            Double previousSpent,
+            Double absoluteChange,
+            Double percentageChange,
+            String topSurgeCategory,
+            Double topSurgeAmount,
+            String topCoolingCategory,
+            Double topCoolingAmount
+    ) {
+        String headline;
+        String insight;
+        String takeaway;
+
+        if (percentageChange > 15.0) {
+            headline = String.format("Outflows Surged by %+.1f%% in %s", percentageChange, currentYm);
+            insight = String.format("You spent ₹%,.0f in %s compared to ₹%,.0f in %s (an increase of ₹%,.0f). %s was your primary surge driver (+₹%,.0f).",
+                    currentSpent, currentYm, previousSpent, previousYm, absoluteChange,
+                    topSurgeCategory != null ? topSurgeCategory : "Spending", topSurgeAmount);
+            takeaway = String.format("Audit %s outflows to curb lifestyle inflation before the next cycle.",
+                    topSurgeCategory != null ? topSurgeCategory : "discretionary");
+        } else if (percentageChange < -10.0) {
+            headline = String.format("Disciplined Cutbacks: Outflows Dropped by %.1f%%", Math.abs(percentageChange));
+            insight = String.format("Total spending reduced from ₹%,.0f in %s down to ₹%,.0f in %s (saving ₹%,.0f). %s saw the highest reduction.",
+                    previousSpent, previousYm, currentSpent, currentYm, Math.abs(absoluteChange),
+                    topCoolingCategory != null ? topCoolingCategory : "General categories");
+            takeaway = String.format("Channel your ₹%,.0f monthly savings into investments or emergency reserves.", Math.abs(absoluteChange));
+        } else {
+            headline = String.format("%s Spending Remained Consistent (%.1f%% Shift)", currentYm, percentageChange);
+            insight = String.format("Your spending of ₹%,.0f closely mirrored %s (₹%,.0f) with a minor net delta of %s₹%,.0f.",
+                    currentSpent, currentYm, previousSpent, absoluteChange >= 0 ? "+" : "", absoluteChange);
+            takeaway = "Pacing remains steady across months. Continue monitoring category caps.";
         }
 
         return builder

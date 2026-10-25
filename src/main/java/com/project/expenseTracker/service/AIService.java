@@ -3,8 +3,10 @@ package com.project.expenseTracker.service;
 import com.project.expenseTracker.dto.AICategoryInsightDto;
 import com.project.expenseTracker.dto.AIEventInsightDto;
 import com.project.expenseTracker.dto.AIInsightDto;
+import com.project.expenseTracker.dto.AIMonthDeltaInsightDto;
 import com.project.expenseTracker.dto.AIParseExpenseRequest;
 import com.project.expenseTracker.dto.AIRequest;
+import com.project.expenseTracker.dto.CategoryMoMDeltaDto;
 import com.project.expenseTracker.dto.ExpenseDto;
 import com.project.expenseTracker.dto.IntentResult;
 import com.project.expenseTracker.dto.ParsedExpenseDto;
@@ -19,11 +21,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -281,6 +286,138 @@ public class AIService {
                 topCategory,
                 topCategoryAmount,
                 categoryBreakdown,
+                defaultVerdict
+        );
+    }
+
+    public AIMonthDeltaInsightDto getMonthDeltaInsight(Long userId, YearMonth requestedCurrentYm, YearMonth requestedCompareYm) {
+        YearMonth currentYm = requestedCurrentYm != null ? requestedCurrentYm : YearMonth.now();
+        YearMonth previousYm = requestedCompareYm != null ? requestedCompareYm : currentYm.minusMonths(1);
+
+        Optional<Month> currentMonthOpt = monthService.getMonthByUserIdAndYearMonth(userId, currentYm);
+        Optional<Month> previousMonthOpt = monthService.getMonthByUserIdAndYearMonth(userId, previousYm);
+
+        List<Expense> currentExpenses = currentMonthOpt.map(Month::getExpenses).orElse(Collections.emptyList());
+        List<Expense> previousExpenses = previousMonthOpt.map(Month::getExpenses).orElse(Collections.emptyList());
+
+        Double currentSpent = currentExpenses.stream()
+                .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                .sum();
+        Double previousSpent = previousExpenses.stream()
+                .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                .sum();
+
+        Double absoluteChange = currentSpent - previousSpent;
+        Double percentageChange = previousSpent > 0
+                ? ((currentSpent - previousSpent) / previousSpent) * 100.0
+                : (currentSpent > 0 ? 100.0 : 0.0);
+
+        Double currentEarning = currentMonthOpt.map(Month::getEarning).orElse(0.0);
+        Double previousEarning = previousMonthOpt.map(Month::getEarning).orElse(0.0);
+
+        Double currentSavingsRate = currentEarning > 0
+                ? Math.max(-100.0, ((currentEarning - currentSpent) / currentEarning) * 100.0)
+                : 0.0;
+        Double previousSavingsRate = previousEarning > 0
+                ? Math.max(-100.0, ((previousEarning - previousSpent) / previousEarning) * 100.0)
+                : 0.0;
+
+        int currentTxCount = currentExpenses.size();
+        int previousTxCount = previousExpenses.size();
+
+        // Category breakdown for current and previous
+        Map<String, Double> currentCats = new HashMap<>();
+        for (Expense e : currentExpenses) {
+            String name = e.getCategory() != null ? e.getCategory().getName() : "General";
+            currentCats.put(name, currentCats.getOrDefault(name, 0.0) + (e.getAmount() != null ? e.getAmount() : 0.0));
+        }
+
+        Map<String, Double> previousCats = new HashMap<>();
+        for (Expense e : previousExpenses) {
+            String name = e.getCategory() != null ? e.getCategory().getName() : "General";
+            previousCats.put(name, previousCats.getOrDefault(name, 0.0) + (e.getAmount() != null ? e.getAmount() : 0.0));
+        }
+
+        Set<String> allCategoryNames = new HashSet<>();
+        allCategoryNames.addAll(currentCats.keySet());
+        allCategoryNames.addAll(previousCats.keySet());
+
+        List<CategoryMoMDeltaDto> categoryDeltas = new ArrayList<>();
+        for (String catName : allCategoryNames) {
+            Double cur = currentCats.getOrDefault(catName, 0.0);
+            Double prev = previousCats.getOrDefault(catName, 0.0);
+            Double delta = cur - prev;
+            Double pct = prev > 0 ? ((cur - prev) / prev) * 100.0 : (cur > 0 ? 100.0 : 0.0);
+
+            categoryDeltas.add(CategoryMoMDeltaDto.builder()
+                    .categoryName(catName)
+                    .currentAmount((double) Math.round(cur))
+                    .previousAmount((double) Math.round(prev))
+                    .absoluteChange((double) Math.round(delta))
+                    .percentageChange((double) Math.round(pct * 10.0) / 10.0)
+                    .build());
+        }
+
+        // Sort by absolute change descending
+        categoryDeltas.sort((a, b) -> Double.compare(b.getAbsoluteChange(), a.getAbsoluteChange()));
+
+        String topSurgeCategory = null;
+        Double topSurgeAmount = 0.0;
+        Double topSurgePercentage = 0.0;
+
+        String topCoolingCategory = null;
+        Double topCoolingAmount = 0.0;
+        Double topCoolingPercentage = 0.0;
+
+        if (!categoryDeltas.isEmpty()) {
+            CategoryMoMDeltaDto highest = categoryDeltas.get(0);
+            if (highest.getAbsoluteChange() > 0) {
+                topSurgeCategory = highest.getCategoryName();
+                topSurgeAmount = highest.getAbsoluteChange();
+                topSurgePercentage = highest.getPercentageChange();
+            }
+
+            CategoryMoMDeltaDto lowest = categoryDeltas.get(categoryDeltas.size() - 1);
+            if (lowest.getAbsoluteChange() < 0) {
+                topCoolingCategory = lowest.getCategoryName();
+                topCoolingAmount = lowest.getAbsoluteChange();
+                topCoolingPercentage = lowest.getPercentageChange();
+            }
+        }
+
+        String defaultVerdict;
+        if (percentageChange <= -12.0) {
+            defaultVerdict = "Disciplined Contraction";
+        } else if (percentageChange >= 20.0) {
+            defaultVerdict = "High Outflow Surge";
+        } else if (percentageChange >= 5.0) {
+            defaultVerdict = "Moderate Creep";
+        } else if (percentageChange <= -5.0) {
+            defaultVerdict = "Frugal Savings";
+        } else {
+            defaultVerdict = "Balanced Flow";
+        }
+
+        return aiResponseService.generateMonthDeltaInsight(
+                currentYm.toString(),
+                previousYm.toString(),
+                (double) Math.round(currentSpent),
+                (double) Math.round(previousSpent),
+                (double) Math.round(absoluteChange),
+                (double) Math.round(percentageChange * 10.0) / 10.0,
+                (double) Math.round(currentEarning),
+                (double) Math.round(previousEarning),
+                (double) Math.round(currentSavingsRate * 10.0) / 10.0,
+                (double) Math.round(previousSavingsRate * 10.0) / 10.0,
+                currentTxCount,
+                previousTxCount,
+                topSurgeCategory,
+                topSurgeAmount,
+                topSurgePercentage,
+                topCoolingCategory,
+                topCoolingAmount,
+                topCoolingPercentage,
+                categoryDeltas,
                 defaultVerdict
         );
     }
